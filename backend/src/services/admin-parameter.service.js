@@ -278,6 +278,30 @@ function normalizeNullableText(value) {
   return text || null;
 }
 
+function normalizeComparableText(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function createDuplicateMasterError(message) {
+  const error = new Error(message);
+  error.code = 'DUPLICATE_MASTER_DATA';
+  error.statusCode = 409;
+  return error;
+}
+
+function formatParameterMetodeLabel({ parameterName, metodeName, acuanMetode, isSubkontrak }) {
+  const parts = [parameterName || 'Parameter', metodeName || 'Metode'];
+
+  if (acuanMetode) {
+    parts.push(acuanMetode);
+  }
+
+  return `${parts.join(' - ')}${Number(isSubkontrak) ? ' (subkontrak)' : ''}`;
+}
+
 function hasChanged(current, next) {
   if (next === undefined) return false;
   return String(current ?? '') !== String(next ?? '');
@@ -377,8 +401,21 @@ class AdminParameterService {
       let metodeId = data.id_metode;
 
       if (data.is_new_parameter) {
-        if (!data.nama_parameter || !data.nama_parameter.trim()) {
+        const namaParameterBaru = String(data.nama_parameter || '').trim();
+
+        if (!namaParameterBaru) {
           throw new Error('Nama parameter baru harus diisi');
+        }
+
+        const existingParameterByName = await Parameter.findOne({
+          where: { nama_parameter: namaParameterBaru },
+          transaction,
+        });
+
+        if (existingParameterByName) {
+          throw createDuplicateMasterError(
+            `Parameter "${namaParameterBaru}" sudah ada. Pilih parameter dari daftar, jangan buat parameter baru.`
+          );
         }
 
         parameterId = await generateNextCode({
@@ -399,15 +436,28 @@ class AdminParameterService {
           {
             id_parameter: parameterId,
             id_kategori_parameter: resolvedKategori.id_kategori_parameter,
-            nama_parameter: data.nama_parameter.trim(),
+            nama_parameter: namaParameterBaru,
           },
           { transaction }
         );
       }
 
       if (data.is_new_metode) {
-        if (!data.nama_metode || !data.nama_metode.trim()) {
+        const namaMetodeBaru = String(data.nama_metode || '').trim();
+
+        if (!namaMetodeBaru) {
           throw new Error('Nama metode baru harus diisi');
+        }
+
+        const existingMetodeByName = await Metode.findOne({
+          where: { nama_metode: namaMetodeBaru },
+          transaction,
+        });
+
+        if (existingMetodeByName) {
+          throw createDuplicateMasterError(
+            `Metode "${namaMetodeBaru}" sudah ada. Pilih metode dari daftar, jangan buat metode baru.`
+          );
         }
 
         metodeId = await generateNextCode({
@@ -421,7 +471,7 @@ class AdminParameterService {
         await Metode.create(
           {
             id_metode: metodeId,
-            nama_metode: data.nama_metode.trim(),
+            nama_metode: namaMetodeBaru,
           },
           { transaction }
         );
@@ -435,16 +485,41 @@ class AdminParameterService {
         throw new Error('Metode harus dipilih atau dibuat baru');
       }
 
+      const normalizedAcuanMetode = normalizeNullableText(data.acuan_metode);
+      const isSubkontrak = data.is_subkontrak ? 1 : 0;
+      const acuanWhere = normalizedAcuanMetode === null
+        ? {
+            [Op.or]: [
+              { acuan_metode: null },
+              { acuan_metode: '' },
+            ],
+          }
+        : { acuan_metode: normalizedAcuanMetode };
+
       const existingCombination = await ParameterMetode.findOne({
         where: {
           id_parameter: parameterId,
           id_metode: metodeId,
+          is_subkontrak: isSubkontrak,
+          ...acuanWhere,
         },
         transaction,
       });
 
       if (existingCombination) {
-        throw new Error('Kombinasi Parameter dan Metode ini sudah ada.');
+        const [parameterRow, metodeRow] = await Promise.all([
+          Parameter.findByPk(parameterId, { attributes: ['nama_parameter'], transaction }),
+          Metode.findByPk(metodeId, { attributes: ['nama_metode'], transaction }),
+        ]);
+
+        const label = formatParameterMetodeLabel({
+          parameterName: parameterRow?.nama_parameter,
+          metodeName: metodeRow?.nama_metode,
+          acuanMetode: normalizedAcuanMetode,
+          isSubkontrak,
+        });
+
+        throw createDuplicateMasterError(`Data parameter metode sudah ada: ${label}.`);
       }
 
       const pmId = await generateNextCode({
@@ -460,9 +535,9 @@ class AdminParameterService {
         id_parameter: parameterId,
         id_metode: metodeId,
         tarif: data.tarif || 0,
-        acuan_metode: data.acuan_metode || null,
+        acuan_metode: normalizedAcuanMetode,
         is_terakreditasi: data.is_terakreditasi ? 1 : 0,
-        is_subkontrak: data.is_subkontrak ? 1 : 0,
+        is_subkontrak: isSubkontrak,
       };
 
       const pm = await ParameterMetode.create(payload, { transaction });

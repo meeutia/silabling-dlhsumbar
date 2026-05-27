@@ -35,7 +35,18 @@ function SharedSamplingDateField({
   );
 }
 
-function SampleReceiptFormCard({ sampelForm, idx, sampelFormList, setSampelFormList }) {
+function SampleReceiptFormCard({ sampelForm, idx, sampelFormList, setSampelFormList, setSampleReceiptError }) {
+  const updateSampleForm = (field, value, extra = {}) => {
+    setSampleReceiptError('');
+    const newList = [...sampelFormList];
+    newList[idx] = {
+      ...newList[idx],
+      [field]: value,
+      ...extra,
+    };
+    setSampelFormList(newList);
+  };
+
   return (
     <div
       key={`${sampelForm.id_fppl_sampel}-${sampelForm.sample_unit_index}-${idx}`}
@@ -53,11 +64,7 @@ function SampleReceiptFormCard({ sampelForm, idx, sampelFormList, setSampelFormL
           </label>
           <select
             value={sampelForm.kondisi}
-            onChange={(e) => {
-              const newList = [...sampelFormList];
-              newList[idx].kondisi = e.target.value;
-              setSampelFormList(newList);
-            }}
+            onChange={(e) => updateSampleForm('kondisi', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
           >
             <option value="">Pilih Kondisi</option>
@@ -73,11 +80,7 @@ function SampleReceiptFormCard({ sampelForm, idx, sampelFormList, setSampelFormL
         </label>
         <textarea
           value={sampelForm.catatan}
-          onChange={(e) => {
-            const newList = [...sampelFormList];
-            newList[idx].catatan = e.target.value;
-            setSampelFormList(newList);
-          }}
+          onChange={(e) => updateSampleForm('catatan', e.target.value)}
           rows={2}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
           placeholder="Abnormalitas sampel bila ada..."
@@ -90,11 +93,7 @@ function SampleReceiptFormCard({ sampelForm, idx, sampelFormList, setSampelFormL
         </label>
         <textarea
           value={sampelForm.acuan_pengambilan_sampel || ''}
-          onChange={(e) => {
-            const newList = [...sampelFormList];
-            newList[idx].acuan_pengambilan_sampel = e.target.value;
-            setSampelFormList(newList);
-          }}
+          onChange={(e) => updateSampleForm('acuan_pengambilan_sampel', e.target.value)}
           rows={2}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
           placeholder="Acuan pengambilan sampel..."
@@ -108,12 +107,7 @@ function SampleReceiptFormCard({ sampelForm, idx, sampelFormList, setSampelFormL
         </label>
         <textarea
           value={sampelForm.lokasi_spesifik || ''}
-          onChange={(e) => {
-            const newList = [...sampelFormList];
-            newList[idx].lokasi_spesifik = e.target.value;
-            newList[idx].lokasiSpesifik = e.target.value;
-            setSampelFormList(newList);
-          }}
+          onChange={(e) => updateSampleForm('lokasi_spesifik', e.target.value, { lokasiSpesifik: e.target.value })}
           rows={2}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
           placeholder="Contoh: Outlet IPAL belakang gedung produksi..."
@@ -127,11 +121,7 @@ function SampleReceiptFormCard({ sampelForm, idx, sampelFormList, setSampelFormL
         <input
           type="text"
           value={sampelForm.koordinat}
-          onChange={(e) => {
-            const newList = [...sampelFormList];
-            newList[idx].koordinat = e.target.value;
-            setSampelFormList(newList);
-          }}
+          onChange={(e) => updateSampleForm('koordinat', e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
           placeholder={`S/N 00°18'48.2" E 100°01'49.3"`}
         />
@@ -212,7 +202,7 @@ export function AdminPermohonanSampleReceiptSection({
 
               {sampleReceiptError && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-                  <p className="text-sm text-red-700">{sampleReceiptError}</p>
+                  <p className="whitespace-pre-line text-sm text-red-700">{sampleReceiptError}</p>
                 </div>
               )}
 
@@ -224,13 +214,14 @@ export function AdminPermohonanSampleReceiptSection({
                     idx={idx}
                     sampelFormList={sampelFormList}
                     setSampelFormList={setSampelFormList}
+                    setSampleReceiptError={setSampleReceiptError}
                   />
                 ))}
               </div>
 
               <button
                 onClick={generateSampleIds}
-                disabled={saving || !!sampleReceiptError}
+                disabled={saving}
                 className="w-full px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}

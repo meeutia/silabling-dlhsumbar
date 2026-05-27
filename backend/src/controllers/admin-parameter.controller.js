@@ -67,15 +67,42 @@ class AdminParameterController {
     } catch (error) {
       console.error('createParameterMetode error:', error);
 
-      if (error.name === 'SequelizeUniqueConstraintError') {
-        return res.status(400).json({
+      if (error.statusCode === 409 || error.code === 'DUPLICATE_MASTER_DATA') {
+        return res.status(409).json({
           success: false,
-          message: 'ID data sudah ada. Silakan coba simpan ulang.',
+          message: error.message || 'Data sudah ada.',
+          code: error.code || 'DUPLICATE_MASTER_DATA',
+        });
+      }
+
+      if (error.name === 'SequelizeUniqueConstraintError') {
+        const fields = (error.errors || []).map((item) => item.path).filter(Boolean);
+        let message = 'Data sudah ada. Periksa kembali parameter, metode, acuan metode, dan status subkontrak.';
+
+        if (fields.includes('nama_parameter')) {
+          message = 'Nama parameter sudah ada. Pilih parameter dari daftar, jangan buat parameter baru.';
+        } else if (fields.includes('nama_metode')) {
+          message = 'Nama metode sudah ada. Pilih metode dari daftar, jangan buat metode baru.';
+        } else if (fields.includes('id_parameter') || fields.includes('id_metode') || fields.includes('acuan_metode')) {
+          message = 'Data parameter metode sudah ada. Gunakan kombinasi parameter, metode, acuan metode, atau status subkontrak yang berbeda.';
+        }
+
+        return res.status(409).json({
+          success: false,
+          message,
+          code: 'DUPLICATE_MASTER_DATA',
+        });
+      }
+
+      if (/sudah ada|duplikat/i.test(error.message || '')) {
+        return res.status(409).json({
+          success: false,
+          message: error.message,
+          code: 'DUPLICATE_MASTER_DATA',
         });
       }
 
       const knownErrors = [
-        'Kombinasi Parameter dan Metode ini sudah ada.',
         'Nama parameter baru harus diisi',
         'Nama metode baru harus diisi',
         'Parameter harus dipilih atau dibuat baru',

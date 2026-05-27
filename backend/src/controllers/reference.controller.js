@@ -123,10 +123,10 @@ const getAdminContact = async (req, res) => {
 const getPccPegawai = async (req, res) => {
   try {
     const data = await ReferenceService.getPccPegawai();
-    return successResponse(res, 'Berhasil mengambil data PCC', data);
+    return successResponse(res, 'Berhasil mengambil data PPS', data);
   } catch (error) {
     console.error('getPccPegawai error:', error.message);
-    return errorResponse(res, error.message || 'Gagal mengambil data PCC.');
+    return errorResponse(res, error.message || 'Gagal mengambil data PPS.');
   }
 };
 

@@ -1,11 +1,12 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { Op } = require('sequelize');
+const { Op, fn, col, where } = require('sequelize');
 
-const { User, Role, Pelanggan } = require('../models/Associations');
+const { User, Role, Pelanggan, Pegawai, UserRefreshSession } = require('../models/Associations');
 const Roles = require('../constants/roles');
 const { sendMail } = require('../utils/mailer');
+const { assertPasswordPolicy } = require('../utils/password-policy.util');
 
 const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
 const REFRESH_TOKEN_EXPIRES_IN_DAYS = Number(process.env.REFRESH_TOKEN_EXPIRES_IN_DAYS || 7);
@@ -41,6 +42,69 @@ const getRefreshExpiryDate = () => {
 
 const getResetPasswordExpiryDate = () => {
   return new Date(Date.now() + RESET_PASSWORD_EXPIRES_MINUTES * 60 * 1000);
+};
+
+const cleanupExpiredRefreshSessions = async (nik) => {
+  if (!nik) return;
+
+  await UserRefreshSession.destroy({
+    where: {
+      nik,
+      [Op.or]: [
+        { refresh_token_expires_at: { [Op.lte]: new Date() } },
+        { revoked_at: { [Op.not]: null } },
+      ],
+    },
+  });
+};
+
+const createRefreshSession = async (nik) => {
+  await cleanupExpiredRefreshSessions(nik);
+
+  const refreshToken = generateRefreshToken();
+  const refreshTokenHash = hashRefreshToken(refreshToken);
+  const refreshExpiresAt = getRefreshExpiryDate();
+
+  await UserRefreshSession.create({
+    nik,
+    refresh_token_hash: refreshTokenHash,
+    refresh_token_expires_at: refreshExpiresAt,
+    created_at: new Date(),
+    last_used_at: new Date(),
+    revoked_at: null,
+  });
+
+  await User.update(
+    {
+      refresh_token_hash: refreshTokenHash,
+      refresh_token_expires_at: refreshExpiresAt,
+    },
+    { where: { nik } }
+  );
+
+  return refreshToken;
+};
+
+const revokeAllRefreshSessions = async (nik) => {
+  if (!nik) return;
+
+  await UserRefreshSession.update(
+    { revoked_at: new Date() },
+    {
+      where: {
+        nik,
+        revoked_at: null,
+      },
+    }
+  );
+
+  await User.update(
+    {
+      refresh_token_hash: null,
+      refresh_token_expires_at: null,
+    },
+    { where: { nik } }
+  );
 };
 
 const escapeHtml = (value) => {
@@ -90,6 +154,116 @@ const buildUserPayload = (userInstance) => {
     pic: pel ? pel.pic : null,
     email_kontak: pel ? pel.email_kontak : null,
   };
+};
+
+
+const buildNoAccountLoginMessage = (record) => {
+  if (!record) {
+    return 'Data ditemukan, tetapi belum memiliki akun login.';
+  }
+
+  if (record.type === 'pegawai') {
+    const name = record.name ? ` untuk ${record.name}` : '';
+    return `Data pegawai${name} ditemukan, tetapi belum memiliki akun login. Minta Kepala Sub Bagian Tata Usaha membuat akun terlebih dahulu.`;
+  }
+
+  if (record.type === 'pelanggan') {
+    const name = record.name ? ` untuk ${record.name}` : '';
+    return `Data pelanggan${name} ditemukan, tetapi belum memiliki akun portal. Silakan daftar akun pelanggan atau hubungi admin.`;
+  }
+
+  return 'Data ditemukan, tetapi belum memiliki akun login.';
+};
+
+const buildNotRegisteredLoginMessage = (identifier) => {
+  const label = String(identifier || '').trim();
+
+  if (!label) {
+    return 'Akun Anda sepertinya belum terdaftar.';
+  }
+
+  return `Akun dengan identitas "${label}" sepertinya belum terdaftar.`;
+};
+
+const hasUserAccount = async (nik) => {
+  const normalizedNik = String(nik || '').trim();
+
+  if (!normalizedNik) {
+    return false;
+  }
+
+  const user = await User.findByPk(normalizedNik, {
+    attributes: ['nik'],
+  });
+
+  return Boolean(user);
+};
+
+const findKnownIdentityWithoutAccount = async (identifier) => {
+  const normalizedIdentifier = String(identifier || '').trim();
+  const normalizedEmail = normalizedIdentifier.toLowerCase();
+  const digitsOnly = normalizedIdentifier.replace(/\D/g, '');
+
+  if (!normalizedIdentifier) {
+    return null;
+  }
+
+  const pegawaiConditions = [];
+
+  if (digitsOnly) {
+    pegawaiConditions.push({ nik: digitsOnly });
+    pegawaiConditions.push({ nip: digitsOnly });
+    pegawaiConditions.push({ no_wa: digitsOnly });
+  }
+
+  if (normalizedIdentifier && normalizedIdentifier !== digitsOnly) {
+    pegawaiConditions.push({ no_wa: normalizedIdentifier });
+  }
+
+  if (pegawaiConditions.length > 0) {
+    const pegawai = await Pegawai.findOne({
+      where: { [Op.or]: pegawaiConditions },
+      attributes: ['nik', 'nip', 'nama_pegawai', 'jabatan', 'no_wa'],
+    });
+
+    const plainPegawai = getPlain(pegawai);
+
+    if (plainPegawai && !(await hasUserAccount(plainPegawai.nik))) {
+      return {
+        type: 'pegawai',
+        name: plainPegawai.nama_pegawai,
+      };
+    }
+  }
+
+  const pelangganConditions = [];
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    pelangganConditions.push({ email_kontak: normalizedEmail });
+  }
+
+  if (digitsOnly) {
+    pelangganConditions.push({ nik: digitsOnly });
+    pelangganConditions.push({ no_telp: digitsOnly });
+  }
+
+  if (pelangganConditions.length > 0) {
+    const pelanggan = await Pelanggan.findOne({
+      where: { [Op.or]: pelangganConditions },
+      attributes: ['nik', 'nama_instansi', 'pic', 'email_kontak', 'no_telp'],
+    });
+
+    const plainPelanggan = getPlain(pelanggan);
+
+    if (plainPelanggan && !(await hasUserAccount(plainPelanggan.nik))) {
+      return {
+        type: 'pelanggan',
+        name: plainPelanggan.nama_instansi || plainPelanggan.pic,
+      };
+    }
+  }
+
+  return null;
 };
 
 const findUserWithProfile = async (where) => {
@@ -142,9 +316,7 @@ const register = async (data) => {
     throw new Error('Format email tidak valid.');
   }
 
-  if (!password || String(password).length < 6) {
-    throw new Error('Password minimal 6 karakter.');
-  }
+  const normalizedPassword = assertPasswordPolicy(password);
 
   const existingNik = await User.findByPk(normalizedNik);
   if (existingNik) {
@@ -166,7 +338,7 @@ const register = async (data) => {
   }
 
   const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
+  const hashedPassword = await bcrypt.hash(normalizedPassword, salt);
 
   const newUser = await User.create({
     nik: normalizedNik,
@@ -177,14 +349,7 @@ const register = async (data) => {
     is_active: 1,
   });
 
-  const refreshToken = generateRefreshToken();
-  const refreshTokenHash = hashRefreshToken(refreshToken);
-  const refreshExpiresAt = getRefreshExpiryDate();
-
-  await newUser.update({
-    refresh_token_hash: refreshTokenHash,
-    refresh_token_expires_at: refreshExpiresAt,
-  });
+  const refreshToken = await createRefreshSession(newUser.nik);
 
   const userWithProfile = await findUserWithProfile({ nik: normalizedNik });
   const token = generateToken(userWithProfile);
@@ -200,6 +365,7 @@ const register = async (data) => {
 const login = async (identifier, password) => {
   const normalizedIdentifier = String(identifier || '').trim();
   const normalizedEmail = normalizedIdentifier.toLowerCase();
+  const normalizedUsername = normalizedIdentifier.toLowerCase();
 
   if (!normalizedIdentifier || !password) {
     throw new Error('Email/username dan password wajib diisi.');
@@ -208,8 +374,8 @@ const login = async (identifier, password) => {
   const user = await User.findOne({
     where: {
       [Op.or]: [
-        { email: normalizedEmail },
-        { username: normalizedIdentifier },
+        where(fn('LOWER', col('email')), normalizedEmail),
+        where(fn('LOWER', col('username')), normalizedUsername),
         { nik: normalizedIdentifier },
       ],
     },
@@ -233,7 +399,13 @@ const login = async (identifier, password) => {
   });
 
   if (!user) {
-    throw new Error('Email atau password salah.');
+    const knownIdentityWithoutAccount = await findKnownIdentityWithoutAccount(normalizedIdentifier);
+
+    if (knownIdentityWithoutAccount) {
+      throw new Error(buildNoAccountLoginMessage(knownIdentityWithoutAccount));
+    }
+
+    throw new Error(buildNotRegisteredLoginMessage(normalizedIdentifier));
   }
 
   if (!user.is_active) {
@@ -245,14 +417,7 @@ const login = async (identifier, password) => {
     throw new Error('Email atau password salah.');
   }
 
-  const refreshToken = generateRefreshToken();
-  const refreshTokenHash = hashRefreshToken(refreshToken);
-  const refreshExpiresAt = getRefreshExpiryDate();
-
-  await user.update({
-    refresh_token_hash: refreshTokenHash,
-    refresh_token_expires_at: refreshExpiresAt,
-  });
+  const refreshToken = await createRefreshSession(user.nik);
 
   const token = generateToken(user);
 
@@ -342,9 +507,7 @@ const resetPassword = async ({ token, password, confirmPassword }) => {
     throw new Error('Token reset tidak valid.');
   }
 
-  if (!newPassword || newPassword.length < 6) {
-    throw new Error('Password baru minimal 6 karakter.');
-  }
+  const normalizedNewPassword = assertPasswordPolicy(newPassword, 'Password baru minimal 8 karakter dan harus mengandung huruf serta angka.');
 
   if (!confirmation) {
     throw new Error('Konfirmasi password wajib diisi.');
@@ -374,7 +537,7 @@ const resetPassword = async ({ token, password, confirmPassword }) => {
   }
 
   const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(newPassword, salt);
+  const hashedPassword = await bcrypt.hash(normalizedNewPassword, salt);
 
   await user.update({
     password: hashedPassword,
@@ -383,6 +546,8 @@ const resetPassword = async ({ token, password, confirmPassword }) => {
     refresh_token_hash: null,
     refresh_token_expires_at: null,
   });
+
+  await revokeAllRefreshSessions(user.nik);
 
   return { success: true };
 };
@@ -393,26 +558,55 @@ const refresh = async (incomingRefreshToken) => {
   }
 
   const refreshTokenHash = hashRefreshToken(incomingRefreshToken);
-  const user = await findUserWithProfile({ refresh_token_hash: refreshTokenHash });
+  const refreshSession = await UserRefreshSession.findOne({
+    where: {
+      refresh_token_hash: refreshTokenHash,
+      revoked_at: null,
+    },
+  });
 
-  if (!user) {
-    throw new Error('Refresh token tidak valid.');
+  let user = null;
+
+  if (refreshSession) {
+    if (!refreshSession.refresh_token_expires_at || new Date(refreshSession.refresh_token_expires_at) <= new Date()) {
+      await refreshSession.update({ revoked_at: new Date() });
+      throw new Error('Refresh token sudah kadaluarsa.');
+    }
+
+    user = await findUserWithProfile({ nik: refreshSession.nik });
+  } else {
+    user = await findUserWithProfile({ refresh_token_hash: refreshTokenHash });
+
+    if (!user) {
+      throw new Error('Refresh token tidak valid.');
+    }
+
+    if (!user.refresh_token_expires_at || new Date(user.refresh_token_expires_at) <= new Date()) {
+      await user.update({
+        refresh_token_hash: null,
+        refresh_token_expires_at: null,
+      });
+
+      throw new Error('Refresh token sudah kadaluarsa.');
+    }
   }
 
-  if (!user.refresh_token_expires_at || new Date(user.refresh_token_expires_at) <= new Date()) {
-    await user.update({
-      refresh_token_hash: null,
-      refresh_token_expires_at: null,
-    });
-
-    throw new Error('Refresh token sudah kadaluarsa.');
+  if (!user) {
+    throw new Error('User tidak ditemukan.');
   }
 
   if (!user.is_active) {
-    await user.update({
-      refresh_token_hash: null,
-      refresh_token_expires_at: null,
-    });
+    if (refreshSession) {
+      await refreshSession.update({ revoked_at: new Date() });
+    }
+
+    await User.update(
+      {
+        refresh_token_hash: null,
+        refresh_token_expires_at: null,
+      },
+      { where: { nik: user.nik } }
+    );
 
     throw new Error('Akun Anda telah dinonaktifkan.');
   }
@@ -421,10 +615,30 @@ const refresh = async (incomingRefreshToken) => {
   const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
   const refreshExpiresAt = getRefreshExpiryDate();
 
-  await user.update({
-    refresh_token_hash: newRefreshTokenHash,
-    refresh_token_expires_at: refreshExpiresAt,
-  });
+  if (refreshSession) {
+    await refreshSession.update({
+      refresh_token_hash: newRefreshTokenHash,
+      refresh_token_expires_at: refreshExpiresAt,
+      last_used_at: new Date(),
+    });
+  } else {
+    await UserRefreshSession.create({
+      nik: user.nik,
+      refresh_token_hash: newRefreshTokenHash,
+      refresh_token_expires_at: refreshExpiresAt,
+      created_at: new Date(),
+      last_used_at: new Date(),
+      revoked_at: null,
+    });
+  }
+
+  await User.update(
+    {
+      refresh_token_hash: newRefreshTokenHash,
+      refresh_token_expires_at: refreshExpiresAt,
+    },
+    { where: { nik: user.nik } }
+  );
 
   const token = generateToken(user);
 
@@ -442,6 +656,18 @@ const logout = async (incomingRefreshToken) => {
   }
 
   const refreshTokenHash = hashRefreshToken(incomingRefreshToken);
+
+  const refreshSession = await UserRefreshSession.findOne({
+    where: {
+      refresh_token_hash: refreshTokenHash,
+      revoked_at: null,
+    },
+  });
+
+  if (refreshSession) {
+    await refreshSession.update({ revoked_at: new Date() });
+    return;
+  }
 
   const user = await User.findOne({
     where: { refresh_token_hash: refreshTokenHash },

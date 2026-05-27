@@ -1,6 +1,20 @@
 const AdminAccountService = require('../services/admin-account.service');
 const { successResponse, errorResponse } = require('../utils/response');
 
+function normalizeAdminAccountError(error) {
+  const message = error?.message || '';
+
+  if (
+    error?.name === 'SequelizeForeignKeyConstraintError' ||
+    message.includes('fk_user_role') ||
+    message.includes('FOREIGN KEY (`id_role`)')
+  ) {
+    return new Error('Role akun belum tersedia di database. Jalankan patch role PSP atau muat ulang halaman Kelola Akun, lalu coba lagi.');
+  }
+
+  return error;
+}
+
 function getErrorCode(error) {
   const message = error.message || '';
 
@@ -9,7 +23,9 @@ function getErrorCode(error) {
     message.includes('tidak valid') ||
     message.includes('minimal') ||
     message.includes('tidak sesuai') ||
-    message.includes('tidak boleh')
+    message.includes('tidak boleh') ||
+    message.includes('Minimal harus ada') ||
+    message.includes('Role akun belum tersedia')
   ) {
     return 400;
   }
@@ -33,8 +49,9 @@ async function getRoles(req, res) {
     const roles = await AdminAccountService.listRoles();
     return successResponse(res, 'Daftar role berhasil dimuat.', { roles }, 200);
   } catch (error) {
-    console.error('getRoles error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('getRoles error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -43,8 +60,9 @@ async function getStaffAccounts(req, res) {
     const staff = await AdminAccountService.listStaff(req.query);
     return successResponse(res, 'Daftar akun petugas berhasil dimuat.', { staff }, 200);
   } catch (error) {
-    console.error('getStaffAccounts error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('getStaffAccounts error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -53,8 +71,9 @@ async function getStaffAccountDetail(req, res) {
     const staff = await AdminAccountService.getStaffByNik(req.params.nik);
     return successResponse(res, 'Detail akun petugas berhasil dimuat.', { staff }, 200);
   } catch (error) {
-    console.error('getStaffAccountDetail error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('getStaffAccountDetail error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -63,8 +82,9 @@ async function createStaffAccount(req, res) {
     const result = await AdminAccountService.createStaff(req.body);
     return successResponse(res, 'Akun petugas berhasil dibuat.', result, 201);
   } catch (error) {
-    console.error('createStaffAccount error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('createStaffAccount error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -77,8 +97,9 @@ async function updateStaffStatus(req, res) {
 
     return successResponse(res, 'Status akun petugas berhasil diperbarui.', { staff }, 200);
   } catch (error) {
-    console.error('updateStaffStatus error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('updateStaffStatus error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -87,8 +108,9 @@ async function resetStaffPassword(req, res) {
     const result = await AdminAccountService.resetStaffPassword(req.params.nik, req.body);
     return successResponse(res, 'Password akun petugas berhasil direset.', result, 200);
   } catch (error) {
-    console.error('resetStaffPassword error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('resetStaffPassword error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -97,8 +119,9 @@ async function getCustomerAccounts(req, res) {
     const customers = await AdminAccountService.listCustomers(req.query);
     return successResponse(res, 'Daftar akun pelanggan berhasil dimuat.', { customers }, 200);
   } catch (error) {
-    console.error('getCustomerAccounts error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('getCustomerAccounts error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -107,8 +130,9 @@ async function getCustomerAccountDetail(req, res) {
     const customer = await AdminAccountService.getCustomerById(req.params.idPelanggan);
     return successResponse(res, 'Detail pelanggan berhasil dimuat.', { customer }, 200);
   } catch (error) {
-    console.error('getCustomerAccountDetail error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('getCustomerAccountDetail error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -121,8 +145,9 @@ async function updateCustomerStatus(req, res) {
 
     return successResponse(res, 'Status pelanggan berhasil diperbarui.', { customer }, 200);
   } catch (error) {
-    console.error('updateCustomerStatus error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('updateCustomerStatus error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 
@@ -135,8 +160,9 @@ async function resetCustomerPassword(req, res) {
 
     return successResponse(res, 'Password pelanggan berhasil direset.', result, 200);
   } catch (error) {
-    console.error('resetCustomerPassword error:', error.message);
-    return errorResponse(res, error.message, getErrorCode(error));
+    const normalizedError = normalizeAdminAccountError(error);
+    console.error('resetCustomerPassword error:', normalizedError.message);
+    return errorResponse(res, normalizedError.message, getErrorCode(normalizedError));
   }
 }
 

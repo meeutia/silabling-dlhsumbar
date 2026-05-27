@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminPermohonanApi } from '../../../api/adminPermohonanApi';
-import { showError, showSuccess, showWarning } from '../../../utils/feedback';
+import { showSuccess, showWarning } from '../../../utils/feedback';
 import {
   validatePickupCompletionForm,
   validatePickupScheduleForm,
@@ -37,6 +37,7 @@ export function useAdminLhuPickup({
   const [selectedPickup, setSelectedPickup] = useState(null);
   const [pickupModalMode, setPickupModalMode] = useState(null);
   const [pickupForm, setPickupForm] = useState(EMPTY_PICKUP_FORM);
+  const [pickupModalAlert, setPickupModalAlert] = useState(null);
   const [showCompletePickupConfirm, setShowCompletePickupConfirm] = useState(false);
   const [holidayDateSet, setHolidayDateSet] = useState(new Set());
   const [holidayNameByDate, setHolidayNameByDate] = useState({});
@@ -83,6 +84,25 @@ export function useAdminLhuPickup({
 
   const resetPickupForm = useCallback(() => {
     setPickupForm(EMPTY_PICKUP_FORM);
+    setPickupModalAlert(null);
+  }, []);
+
+  const showPickupModalAlert = useCallback((messageOrAlert, tone = 'warning') => {
+    const alert = typeof messageOrAlert === 'object' && messageOrAlert !== null
+      ? messageOrAlert
+      : { message: String(messageOrAlert || ''), tone };
+
+    if (!alert.message) return;
+
+    setPickupModalAlert({
+      title: alert.title || (alert.tone === 'error' ? 'Gagal memproses data' : 'Data perlu dicek'),
+      tone: alert.tone || tone,
+      message: alert.message,
+    });
+  }, []);
+
+  const clearPickupModalAlert = useCallback(() => {
+    setPickupModalAlert(null);
   }, []);
 
   const fetchPickupQueue = useCallback(async () => {
@@ -108,6 +128,7 @@ export function useAdminLhuPickup({
     }
 
     setSelectedPickup(row);
+    setPickupModalAlert(null);
     setPickupModalMode('schedule');
     setPickupForm(buildSchedulePickupForm(row));
   }, []);
@@ -119,6 +140,7 @@ export function useAdminLhuPickup({
     }
 
     setSelectedPickup(row);
+    setPickupModalAlert(null);
     setPickupModalMode('complete');
     setShowCompletePickupConfirm(false);
     resetPickupForm();
@@ -137,12 +159,12 @@ export function useAdminLhuPickup({
     const validationMessage = validatePickupCompletionForm(pickupForm);
 
     if (validationMessage) {
-      showWarning(validationMessage);
+      showPickupModalAlert(validationMessage);
       return;
     }
 
     setShowCompletePickupConfirm(true);
-  }, [pickupForm, selectedPickup]);
+  }, [pickupForm, selectedPickup, showPickupModalAlert]);
 
   const cancelCompletePickupConfirmation = useCallback(() => {
     setShowCompletePickupConfirm(false);
@@ -154,7 +176,7 @@ export function useAdminLhuPickup({
     const validationMessage = validatePickupScheduleForm(pickupForm, isBusinessDay);
 
     if (validationMessage) {
-      showWarning(validationMessage);
+      showPickupModalAlert(validationMessage);
       return;
     }
 
@@ -172,11 +194,15 @@ export function useAdminLhuPickup({
       closePickupModal();
       await fetchPickupQueue();
     } catch (error) {
-      showError(error?.message || 'Gagal menyimpan jadwal pengambilan LHU.');
+      showPickupModalAlert({
+        tone: 'error',
+        title: 'Jadwal gagal disimpan',
+        message: error?.message || 'Gagal menyimpan jadwal pengambilan LHU.',
+      });
     } finally {
       setSaving(false);
     }
-  }, [closePickupModal, fetchPickupQueue, isBusinessDay, pickupForm, selectedPickup, setSaving]);
+  }, [closePickupModal, fetchPickupQueue, isBusinessDay, pickupForm, selectedPickup, setSaving, showPickupModalAlert]);
 
   const handleCompletePickup = useCallback(async () => {
     if (!selectedPickup) return;
@@ -184,7 +210,7 @@ export function useAdminLhuPickup({
     const validationMessage = validatePickupCompletionForm(pickupForm);
 
     if (validationMessage) {
-      showWarning(validationMessage);
+      showPickupModalAlert(validationMessage);
       setShowCompletePickupConfirm(false);
       return;
     }
@@ -208,7 +234,12 @@ export function useAdminLhuPickup({
         setSelectedRequest(refreshedDetail);
       }
     } catch (error) {
-      showError(error?.message || 'Gagal menandai pengambilan LHU.');
+      showPickupModalAlert({
+        tone: 'error',
+        title: 'Pengambilan gagal diproses',
+        message: error?.message || 'Gagal menandai pengambilan LHU.',
+      });
+      setShowCompletePickupConfirm(false);
     } finally {
       setSaving(false);
     }
@@ -222,6 +253,7 @@ export function useAdminLhuPickup({
     selectedRequest?.id_registrasi,
     setSaving,
     setSelectedRequest,
+    showPickupModalAlert,
   ]);
 
   return {
@@ -231,8 +263,11 @@ export function useAdminLhuPickup({
     selectedPickup,
     pickupModalMode,
     pickupForm,
+    pickupModalAlert,
     showCompletePickupConfirm,
     setPickupForm,
+    setPickupModalAlert: showPickupModalAlert,
+    clearPickupModalAlert,
     fetchPickupQueue,
     openSchedulePickupModal,
     openCompletePickupModal,

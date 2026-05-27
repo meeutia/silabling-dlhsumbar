@@ -25,7 +25,7 @@ export function AdminPermohonanScheduleSection({
   saving,
 }) {
   const isOfficerSampling = usesOfficerSampling(selectedRequest);
-  const scheduleLabel = isOfficerSampling ? 'Jadwal Pengambilan oleh PCC' : 'Jadwal Pengantaran Mandiri';
+  const scheduleLabel = isOfficerSampling ? 'Jadwal Pengambilan oleh PPS' : 'Jadwal Pengantaran Mandiri';
   const normalizedStatus = normalizeFpplStatus(selectedRequest.status_fppl);
   const canManageSchedule = [
     FPPL_STATUSES.MENUNGGU_PENENTUAN_PARAMETER,
@@ -168,14 +168,14 @@ export function AdminPermohonanScheduleSection({
                     {isOfficerSampling && (
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Petugas Pengambil Sampel (PCC) <span className="text-red-500">*</span>
+                          Petugas Pengambil Sampel (PPS) <span className="text-red-500">*</span>
                         </label>
                         <select
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                           value={scheduleForm.idPegawaiPcc}
                           onChange={(e) => {
                             setScheduleForm({ ...scheduleForm, idPegawaiPcc: e.target.value });
-                             if (scheduleError === 'PCC wajib dipilih.') setScheduleError('');
+                             if (scheduleError === 'PPS wajib dipilih.') setScheduleError('');
                           }}
                         >
                           <option value="">Pilih Petugas</option>

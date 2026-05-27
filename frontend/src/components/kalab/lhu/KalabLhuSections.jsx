@@ -50,16 +50,18 @@ export function KalabLhuHeader() {
   );
 }
 
-export function KalabLhuMetricCards({ metrics = [] }) {
+export function KalabLhuMetricCards({ metrics = [], onSelectTab }) {
   return (
     <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
       {metrics.map((metric) => {
         const Icon = metric.icon;
 
         return (
-          <div
+          <button
             key={metric.label}
-            className="rounded-xl border border-gray-200 bg-white p-6 transition-shadow hover:shadow-md"
+            type="button"
+            onClick={() => onSelectTab?.(metric.label === 'Menunggu Verifikasi' ? 'Persetujuan' : 'Riwayat')}
+            className="w-full rounded-xl border border-gray-200 bg-white p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
           >
             <div className="mb-4 flex items-start justify-between">
               <div className={`rounded-lg p-3 ${metric.iconBg}`}>
@@ -77,7 +79,7 @@ export function KalabLhuMetricCards({ metrics = [] }) {
               <p className="text-xs text-gray-600">{metric.sublabel}</p>
               <p className="mt-2 text-xs text-gray-500">{metric.trend}</p>
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

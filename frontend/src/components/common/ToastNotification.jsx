@@ -1,14 +1,25 @@
 import { AlertCircle, CheckCircle2, Info, TriangleAlert, X } from 'lucide-react';
+import { getToastConfig, getToastTitle, normalizeToastType } from '../../utils/toastConfig';
 
 const POSITION_CLASS = {
   top: 'top-20 right-4 left-4 sm:left-auto sm:right-5',
-  bottom: 'bottom-4 right-4 left-4 sm:left-auto',
+  bottom: 'bottom-4 right-4 left-4 sm:left-auto sm:right-5',
+  modalTop: 'top-[calc(5vh+0.75rem)] left-1/2 right-auto -translate-x-1/2',
+  parameterModalTop: 'top-[calc(5vh+0.75rem)] left-1/2 right-auto -translate-x-1/2',
+  inline: 'relative',
+};
+
+const POSITION_WIDTH_CLASS = {
+  top: 'w-auto max-w-md',
+  bottom: 'w-auto max-w-md',
+  modalTop: 'w-[calc(100%-2rem)] max-w-3xl',
+  parameterModalTop: 'w-[calc(100%-2rem)] max-w-3xl',
+  inline: 'w-full',
 };
 
 const TOAST_STYLE = {
   success: {
     icon: CheckCircle2,
-    title: 'Berhasil',
     compactClass: 'bg-gray-900 text-white',
     borderClass: 'border-emerald-200 bg-emerald-50',
     iconClass: 'text-emerald-600',
@@ -17,7 +28,6 @@ const TOAST_STYLE = {
   },
   error: {
     icon: AlertCircle,
-    title: 'Gagal',
     compactClass: 'bg-red-600 text-white',
     borderClass: 'border-red-200 bg-red-50',
     iconClass: 'text-red-600',
@@ -26,7 +36,6 @@ const TOAST_STYLE = {
   },
   warning: {
     icon: TriangleAlert,
-    title: 'Perlu dicek',
     compactClass: 'bg-amber-600 text-white',
     borderClass: 'border-amber-200 bg-amber-50',
     iconClass: 'text-amber-600',
@@ -35,7 +44,6 @@ const TOAST_STYLE = {
   },
   info: {
     icon: Info,
-    title: 'Informasi',
     compactClass: 'bg-blue-600 text-white',
     borderClass: 'border-blue-200 bg-blue-50',
     iconClass: 'text-blue-600',
@@ -47,22 +55,27 @@ const TOAST_STYLE = {
 export function ToastNotification({
   toast,
   onClose,
-  position = 'top',
+  position,
   compact = false,
 }) {
   const isOpen = Boolean(toast?.show ?? toast);
   if (!isOpen) return null;
 
-  const style = TOAST_STYLE[toast?.type] || TOAST_STYLE.success;
-  const title = toast?.title || style.title;
+  const type = normalizeToastType(toast?.type || 'success');
+  const config = getToastConfig(type);
+  const style = TOAST_STYLE[type] || TOAST_STYLE.success;
+  const title = getToastTitle(type, toast?.title);
   const message = toast?.message || '';
   const Icon = style.icon;
-  const containerClass = POSITION_CLASS[position] || POSITION_CLASS.top;
+  const resolvedPosition = position || toast?.position || config.position;
+  const containerClass = POSITION_CLASS[resolvedPosition] || POSITION_CLASS.top;
+  const widthClass = POSITION_WIDTH_CLASS[resolvedPosition] || POSITION_WIDTH_CLASS.top;
 
   if (compact) {
     return (
       <div
-        className={`fixed ${containerClass} z-[80] flex items-center gap-3 rounded-xl px-6 py-3 shadow-lg ${style.compactClass}`}
+        className={`${resolvedPosition === 'inline' ? 'relative' : 'fixed'} ${containerClass} z-[9999] flex items-center gap-3 rounded-xl px-6 py-3 shadow-lg ${widthClass} ${style.compactClass}`}
+        role="status"
       >
         <Icon className="h-5 w-5" />
         <span className="text-sm font-medium">{message || title}</span>
@@ -76,7 +89,7 @@ export function ToastNotification({
   }
 
   return (
-    <div className={`fixed ${containerClass} z-[80] w-auto max-w-md`}>
+    <div className={`${resolvedPosition === 'inline' ? 'relative' : 'fixed'} ${containerClass} z-[9999] ${widthClass}`} role="status">
       <div className={`rounded-xl border p-4 shadow-xl ${style.borderClass}`}>
         <div className="flex items-start gap-3">
           <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${style.iconClass}`} />

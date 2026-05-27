@@ -50,6 +50,9 @@ export function AdminKelolaParameterPage() {
     addButtonLabel,
     rowsByTab,
     toast,
+    hideToast,
+    modalAlert,
+    hideModalAlert,
     isModalOpen,
     modalType,
     selectedItem,
@@ -83,6 +86,8 @@ export function AdminKelolaParameterPage() {
     setConfirmDelete,
     setEditingPaketParam,
   } = useAdminKelolaParameter();
+
+  const isParameterMetodeModalOpen = isModalOpen && (modalType === 'add_param_metode' || modalType === 'edit_param_metode');
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -119,9 +124,11 @@ export function AdminKelolaParameterPage() {
           onToggleStatus={handleToggleMasterStatus}
         />
 
-        <ToastNotification toast={toast} position="bottom" compact />
+        {!isParameterMetodeModalOpen && (
+          <ToastNotification toast={toast} onClose={hideToast} />
+        )}
 
-        {isModalOpen && (modalType === 'add_param_metode' || modalType === 'edit_param_metode') && (
+        {isParameterMetodeModalOpen && (
           <ParameterMetodeModal
             selectedItem={selectedItem}
             formData={formData}
@@ -131,6 +138,8 @@ export function AdminKelolaParameterPage() {
             onClose={handleCloseModal}
             onChange={handleFormChange}
             onSubmit={handleSubmit}
+            modalAlert={modalAlert}
+            onModalAlertClose={hideModalAlert}
           />
         )}
 

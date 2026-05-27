@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle } from 'lucide-react';
 import { authApi } from '../../api/authApi';
+import { validatePasswordPolicy } from '../../utils/passwordPolicy';
 
 export function ResetPasswordPage({ onBackToLogin }) {
   const token = new URLSearchParams(window.location.search).get('token') || '';
@@ -24,8 +25,9 @@ export function ResetPasswordPage({ onBackToLogin }) {
       return;
     }
 
-    if (!password || password.length < 6) {
-      setError('Password baru minimal 6 karakter.');
+    const passwordError = validatePasswordPolicy(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -86,7 +88,7 @@ export function ResetPasswordPage({ onBackToLogin }) {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 className="w-full rounded-lg border border-gray-300 py-3 pl-11 pr-11 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-emerald-500"
-                placeholder="Minimal 6 karakter"
+                placeholder="Minimal 8 karakter, huruf dan angka"
                 disabled={loading || Boolean(success)}
               />
 

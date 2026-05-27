@@ -35,7 +35,7 @@ export function QcLhuSections(page) {
           </div>
         </div>
 
-        <QcLhuSummaryCards summary={summary} />
+        <QcLhuSummaryCards summary={summary} onSelectTab={setActiveTab} />
 
         <QcLhuSearchTabs
           activeTab={activeTab}

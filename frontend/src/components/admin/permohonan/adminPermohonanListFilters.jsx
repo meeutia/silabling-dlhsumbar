@@ -10,6 +10,7 @@ export const ACTIVE_REQUEST_STATUSES = [
   FPPL_STATUSES.MENUNGGU_VERIFIKASI_PEMBAYARAN,
   FPPL_STATUSES.MENUNGGU_SAMPEL,
   FPPL_STATUSES.PROSES_PENGUJIAN,
+  FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU,
 ];
 
 export const HISTORY_REQUEST_STATUSES = [
@@ -38,6 +39,7 @@ export const getTabFilterOptions = (activeTab) => {
     'Menunggu Verifikasi Pembayaran',
     'Menunggu Sampel',
     'Proses Pengujian',
+    'Menunggu Pengambilan LHU',
   ];
 };
 
@@ -49,6 +51,7 @@ export const getStatusFilterValue = (filterLabel) => {
     'Menunggu Verifikasi Pembayaran': FPPL_STATUSES.MENUNGGU_VERIFIKASI_PEMBAYARAN,
     'Menunggu Sampel': FPPL_STATUSES.MENUNGGU_SAMPEL,
     'Proses Pengujian': FPPL_STATUSES.PROSES_PENGUJIAN,
+    'Menunggu Pengambilan LHU': FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU,
     Selesai: FPPL_STATUSES.SELESAI,
     Dibatalkan: FPPL_STATUSES.DIBATALKAN,
     'Dibatalkan Pelanggan': FPPL_STATUSES.DIBATALKAN_PELANGGAN,

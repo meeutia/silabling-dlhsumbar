@@ -253,7 +253,7 @@ export default function App() {
           ? getRouteStatusRegistrationId(route)
           : '';
       const adminPermohonanRegistrationId =
-        userRole === 'admin' && nextPage === 'permohonan'
+        ['admin', 'psp'].includes(userRole) && nextPage === 'permohonan'
           ? getRouteAdminPermohonanRegistrationId(route)
           : '';
       const kasiPermohonanRegistrationId =

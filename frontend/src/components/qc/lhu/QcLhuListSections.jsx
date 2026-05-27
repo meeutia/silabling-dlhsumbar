@@ -17,47 +17,67 @@ import {
 } from '../../lhu/lhuReviewUtils';
 import { getLhuStatusDisplayLabel } from '../../../utils/workflowAccessRules';
 
-export function QcLhuSummaryCards({ summary }) {
+export function QcLhuSummaryCards({ summary, onSelectTab }) {
+  const cards = [
+    {
+      title: 'Butuh Finalisasi',
+      subtitle: 'Permohonan siap dibuat LHU',
+      value: summary.total,
+      icon: FileText,
+      iconBox: 'bg-blue-50 text-blue-700',
+      tab: 'finalisasi',
+    },
+    {
+      title: 'Menunggu QC',
+      subtitle: 'Belum dibuatkan LHU',
+      value: summary.belumDibuat,
+      icon: PackageCheck,
+      iconBox: 'bg-amber-50 text-amber-700',
+      tab: 'finalisasi',
+    },
+    {
+      title: 'Menunggu Kepala Lab',
+      subtitle: 'LHU menunggu pengesahan',
+      value: summary.menungguKalab,
+      icon: AlertCircle,
+      iconBox: 'bg-red-50 text-red-700',
+      tab: 'history',
+    },
+    {
+      title: 'Disahkan',
+      subtitle: 'LHU final',
+      value: summary.disahkan,
+      icon: ShieldCheck,
+      iconBox: 'bg-emerald-50 text-emerald-700',
+      tab: 'history',
+    },
+  ];
+
   return (
     <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-3 w-fit rounded-lg bg-blue-50 p-3 text-blue-700">
-          <FileText className="h-6 w-6" />
-        </div>
-        <p className="mb-1 text-2xl font-bold text-gray-900">{summary.total}</p>
-        <p className="mb-1 text-sm font-medium text-gray-900">Butuh Finalisasi</p>
-        <p className="text-xs text-gray-600">Permohonan siap dibuat LHU</p>
-      </div>
+      {cards.map((card) => {
+        const Icon = card.icon;
 
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-3 w-fit rounded-lg bg-amber-50 p-3 text-amber-700">
-          <PackageCheck className="h-6 w-6" />
-        </div>
-        <p className="mb-1 text-2xl font-bold text-gray-900">{summary.belumDibuat}</p>
-        <p className="mb-1 text-sm font-medium text-gray-900">Menunggu QC</p>
-        <p className="text-xs text-gray-600">Belum dibuatkan LHU</p>
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-3 w-fit rounded-lg bg-red-50 p-3 text-red-700">
-          <AlertCircle className="h-6 w-6" />
-        </div>
-        <p className="mb-1 text-2xl font-bold text-gray-900">{summary.menungguKalab}</p>
-        <p className="mb-1 text-sm font-medium text-gray-900">Menunggu Kepala Lab</p>
-        <p className="text-xs text-gray-600">LHU menunggu pengesahan</p>
-      </div>
-
-      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-3 w-fit rounded-lg bg-emerald-50 p-3 text-emerald-700">
-          <ShieldCheck className="h-6 w-6" />
-        </div>
-        <p className="mb-1 text-2xl font-bold text-gray-900">{summary.disahkan}</p>
-        <p className="mb-1 text-sm font-medium text-gray-900">Disahkan</p>
-        <p className="text-xs text-gray-600">LHU final</p>
-      </div>
+        return (
+          <button
+            key={card.title}
+            type="button"
+            onClick={() => onSelectTab?.(card.tab)}
+            className="w-full rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          >
+            <div className={`mb-3 w-fit rounded-lg p-3 ${card.iconBox}`}>
+              <Icon className="h-6 w-6" />
+            </div>
+            <p className="mb-1 text-2xl font-bold text-gray-900">{card.value}</p>
+            <p className="mb-1 text-sm font-medium text-gray-900">{card.title}</p>
+            <p className="text-xs text-gray-600">{card.subtitle}</p>
+          </button>
+        );
+      })}
     </div>
   );
 }
+
 
 export function QcLhuSearchTabs({ activeTab, setActiveTab, search, setSearch }) {
   return (

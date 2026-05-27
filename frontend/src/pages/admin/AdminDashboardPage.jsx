@@ -16,6 +16,8 @@ export function AdminDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-amber-100 text-amber-700',
       iconBg: 'bg-amber-50',
       trend: metrics.todayNewRequests > 0 ? `+${metrics.todayNewRequests} hari ini` : 'Tidak ada baru',
+      actionLabel: 'Buka permohonan menunggu verifikasi',
+      onClick: () => onNavigate('permohonan', { queryParams: { tab: 'Aktif', status: 'Menunggu Verifikasi' } }),
     },
     {
       label: 'Menunggu Pembayaran',
@@ -25,6 +27,8 @@ export function AdminDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-blue-100 text-blue-700',
       iconBg: 'bg-blue-50',
       trend: 'Gateway / Bayar Nanti',
+      actionLabel: 'Buka permohonan menunggu pembayaran',
+      onClick: () => onNavigate('permohonan', { queryParams: { tab: 'Aktif', status: 'Menunggu Pembayaran' } }),
     },
     {
       label: 'Menunggu Sampel',
@@ -34,6 +38,8 @@ export function AdminDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-purple-100 text-purple-700',
       iconBg: 'bg-purple-50',
       trend: `${metrics.todayPickup} pickup hari ini`,
+      actionLabel: 'Buka permohonan menunggu sampel',
+      onClick: () => onNavigate('permohonan', { queryParams: { tab: 'Aktif', status: 'Menunggu Sampel' } }),
     },
     {
       label: 'Proses Pengujian',
@@ -43,6 +49,8 @@ export function AdminDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-cyan-100 text-cyan-700',
       iconBg: 'bg-cyan-50',
       trend: 'Read-only',
+      actionLabel: 'Buka permohonan proses pengujian',
+      onClick: () => onNavigate('permohonan', { queryParams: { tab: 'Aktif', status: 'Proses Pengujian' } }),
     },
     {
       label: 'Selesai',
@@ -52,6 +60,8 @@ export function AdminDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-emerald-100 text-emerald-700',
       iconBg: 'bg-emerald-50',
       trend: 'Akumulasi',
+      actionLabel: 'Buka riwayat permohonan selesai',
+      onClick: () => onNavigate('permohonan', { queryParams: { tab: 'Riwayat', status: 'Selesai' } }),
     },
   ];
 

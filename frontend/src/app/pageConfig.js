@@ -8,6 +8,7 @@ import {
   FileText,
   FlaskRound,
   Home,
+  Landmark,
   Users,
 } from 'lucide-react';
 import uptdLogo from '../assets/logo-uptd.png';
@@ -20,6 +21,11 @@ const PAGE_ALIASES = {
     detail_penugasan: 'detail-penugasan',
     kelola_parameter: 'kelola-parameter',
     kelola_akun: 'kelola-akun',
+    kelola_rekening: 'kelola-rekening',
+    rekening: 'kelola-rekening',
+    'rekening-pembayaran': 'kelola-rekening',
+    payment_accounts: 'kelola-rekening',
+    'payment-accounts': 'kelola-rekening',
   },
 };
 
@@ -39,17 +45,30 @@ export const ROLE_PAGE_CONFIG = {
   },
   admin: {
     portalTitle: 'SILABLING',
-    portalSubtitle: 'Administrator',
+    portalSubtitle: 'Kepala Sub Bagian Tata Usaha',
     portalLogo: uptdLogo,
-    roleLabel: 'Administrator',
+    roleLabel: 'Kepala Sub Bagian Tata Usaha',
     defaultPage: 'dashboard',
     pages: {
       dashboard: { title: 'Dashboard', menuLabel: 'Dashboard', icon: Home },
       permohonan: { title: 'Permohonan Uji', menuLabel: 'Permohonan Uji', icon: FileCheck },
       'kelola-parameter': { title: 'Kelola Parameter', menuLabel: 'Kelola Parameter', icon: Beaker },
       'kelola-akun': { title: 'Kelola Akun', menuLabel: 'Kelola Akun', icon: Users },
+      'kelola-rekening': { title: 'Kelola Nomor Rekening', menuLabel: 'Kelola Rekening', icon: Landmark },
     },
-    menu: ['dashboard', 'permohonan', 'kelola-parameter', 'kelola-akun'],
+    menu: ['dashboard', 'permohonan', 'kelola-rekening', 'kelola-parameter', 'kelola-akun'],
+  },
+  psp: {
+    portalTitle: 'SILABLING',
+    portalSubtitle: 'Pengelola Sampel Pengujian',
+    portalLogo: uptdLogo,
+    roleLabel: 'Pengelola Sampel Pengujian',
+    defaultPage: 'dashboard',
+    pages: {
+      dashboard: { title: 'Dashboard', menuLabel: 'Dashboard', icon: Home },
+      permohonan: { title: 'Permohonan Uji', menuLabel: 'Permohonan Uji', icon: FileCheck },
+    },
+    menu: ['dashboard', 'permohonan'],
   },
   kasi: {
     portalTitle: 'SILABLING',
@@ -72,7 +91,7 @@ export const ROLE_PAGE_CONFIG = {
     defaultPage: 'pengujian',
     pages: {
       pengujian: { title: 'Pengujian Sampel', menuLabel: 'Pengujian Sampel', icon: FlaskRound },
-      penugasan: { title: 'Monitoring Penugasan', menuLabel: 'Monitoring Penugasan', icon: Users },
+      penugasan: { title: 'Penugasan', menuLabel: 'Penugasan', icon: Users },
       'detail-penugasan': { title: 'Detail Penugasan', parent: 'penugasan' },
     },
     menu: ['pengujian', 'penugasan'],

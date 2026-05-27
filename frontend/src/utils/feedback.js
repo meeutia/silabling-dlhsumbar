@@ -1,17 +1,22 @@
+import { getToastDuration, getToastTitle, normalizeToastType } from './toastConfig';
+
 const TOAST_EVENT_NAME = 'app:toast';
 
 function emitToast(detail) {
   if (typeof window === 'undefined') return;
 
+  const type = normalizeToastType(detail?.type || 'success');
+
   window.dispatchEvent(
     new CustomEvent(TOAST_EVENT_NAME, {
       detail: {
-        id: Date.now(),
-        type: detail.type || 'success',
-        title: detail.title,
-        message: detail.message || '',
-        temporaryPassword: detail.temporaryPassword,
-        duration: detail.duration,
+        id: detail?.id || Date.now(),
+        type,
+        title: getToastTitle(type, detail?.title),
+        message: detail?.message || '',
+        temporaryPassword: detail?.temporaryPassword,
+        duration: getToastDuration(type, detail?.duration),
+        position: detail?.position,
       },
     })
   );
@@ -24,7 +29,7 @@ export function showToast(detail) {
 export function showSuccess(message, options = {}) {
   emitToast({
     type: 'success',
-    title: options.title || 'Berhasil',
+    title: options.title,
     message,
     ...options,
   });
@@ -33,7 +38,7 @@ export function showSuccess(message, options = {}) {
 export function showError(message, options = {}) {
   emitToast({
     type: 'error',
-    title: options.title || 'Gagal',
+    title: options.title,
     message,
     ...options,
   });
@@ -42,7 +47,7 @@ export function showError(message, options = {}) {
 export function showInfo(message, options = {}) {
   emitToast({
     type: 'info',
-    title: options.title || 'Informasi',
+    title: options.title,
     message,
     ...options,
   });
@@ -51,7 +56,7 @@ export function showInfo(message, options = {}) {
 export function showWarning(message, options = {}) {
   emitToast({
     type: 'warning',
-    title: options.title || 'Perlu dicek',
+    title: options.title,
     message,
     ...options,
   });

@@ -144,6 +144,11 @@ export function PenyeliaReviewPage() {
       color: 'bg-blue-100 text-blue-700',
       iconBg: 'bg-blue-50',
       trend: 'Overview',
+      actionLabel: 'Tampilkan sampel aktif',
+      onClick: () => {
+        setActiveTab('aktif');
+        setSearchQuery('');
+      },
     },
     {
       label: 'Butuh Penugasan',
@@ -153,6 +158,11 @@ export function PenyeliaReviewPage() {
       color: 'bg-red-100 text-red-700',
       iconBg: 'bg-red-50',
       trend: 'Prioritas',
+      actionLabel: 'Tampilkan sampel butuh penugasan',
+      onClick: () => {
+        setActiveTab('aktif');
+        setSearchQuery('penugasan');
+      },
     },
     {
       label: 'Menunggu Review',
@@ -162,6 +172,11 @@ export function PenyeliaReviewPage() {
       color: 'bg-violet-100 text-violet-700',
       iconBg: 'bg-violet-50',
       trend: 'Review',
+      actionLabel: 'Tampilkan sampel menunggu review',
+      onClick: () => {
+        setActiveTab('aktif');
+        setSearchQuery('review');
+      },
     },
     {
       label: 'Selesai',
@@ -171,6 +186,11 @@ export function PenyeliaReviewPage() {
       color: 'bg-emerald-100 text-emerald-700',
       iconBg: 'bg-emerald-50',
       trend: 'Riwayat',
+      actionLabel: 'Tampilkan riwayat sampel selesai',
+      onClick: () => {
+        setActiveTab('riwayat');
+        setSearchQuery('');
+      },
     },
   ];
 

@@ -175,7 +175,7 @@ export function StaffTable({ rows, loading, onView }) {
                 <td className="px-6 py-4">
                   <p className="text-sm font-medium text-gray-900">{dash(row.role)}</p>
                   {Number(row.is_pcc || 0) === 1 && (
-                    <p className="text-xs text-emerald-600 font-semibold mt-1">PCC</p>
+                    <p className="text-xs text-emerald-600 font-semibold mt-1">PPS</p>
                   )}
                 </td>
 

@@ -7,6 +7,7 @@ import { AdminDashboardPage } from '../pages/admin/AdminDashboardPage';
 import { AdminPermohonanPage } from '../pages/admin/AdminPermohonanPage';
 import { AdminKelolaAkunPage } from '../pages/admin/AdminKelolaAkunPage';
 import { AdminKelolaParameterPage } from '../pages/admin/AdminKelolaParameterPage';
+import { AdminPaymentAccountsPage } from '../pages/admin/AdminPaymentAccountsPage';
 
 import { KasiDashboardPage } from '../pages/kasi/KasiDashboardPage';
 import { KasiPermohonanPage } from '../pages/kasi/KasiPermohonanPage';
@@ -75,7 +76,8 @@ export function AppPageRenderer({
   }
 
   switch (userRole) {
-    case 'admin': {
+    case 'admin':
+    case 'psp': {
       if (currentPage === 'dashboard') return <AdminDashboardPage onNavigate={setCurrentPage} />;
       if (currentPage === 'permohonan') {
         return (
@@ -93,6 +95,7 @@ export function AppPageRenderer({
       }
       if (currentPage === 'kelola-parameter') return <AdminKelolaParameterPage />;
       if (currentPage === 'kelola-akun') return <AdminKelolaAkunPage />;
+      if (currentPage === 'kelola-rekening') return <AdminPaymentAccountsPage />;
       break;
     }
 

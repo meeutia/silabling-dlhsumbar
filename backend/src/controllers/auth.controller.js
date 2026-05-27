@@ -76,7 +76,11 @@ const register = async (req, res) => {
             code = 409;
         }
 
-        return errorResponse(res, error.message || 'Terjadi kesalahan pada server.', code);
+        const errors = error.message.includes('belum memiliki akun')
+            ? { errorType: 'NO_ACCOUNT', code: 'NO_ACCOUNT' }
+            : null;
+
+        return errorResponse(res, error.message || 'Terjadi kesalahan pada server.', code, errors);
     }
 };
 
@@ -95,8 +99,6 @@ const login = async (req, res) => {
             user: result.user
         }, 200);
     } catch (error) {
-        console.error('Login error:', error.message);
-
         let code = 500;
         if (
             error.message.includes('wajib diisi') ||
@@ -104,8 +106,17 @@ const login = async (req, res) => {
             error.message.includes('salah')
         ) {
             code = 401;
-        } else if (error.message.includes('dinonaktifkan')) {
+        } else if (error.message.includes('belum terdaftar')) {
+            code = 404;
+        } else if (
+            error.message.includes('dinonaktifkan') ||
+            error.message.includes('belum memiliki akun')
+        ) {
             code = 403;
+        }
+
+        if (code >= 500) {
+            console.error('Login error:', error.message);
         }
 
         return errorResponse(res, error.message || 'Terjadi kesalahan pada server.', code);

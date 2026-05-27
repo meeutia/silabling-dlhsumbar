@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { formatRupiahInput } from './parameterFormatters';
 
 export function TarifPengambilanModal({ selectedItem, formData, onClose, onChange, onSubmit }) {
   return (
@@ -41,13 +42,13 @@ export function TarifPengambilanModal({ selectedItem, formData, onClose, onChang
                 Tarif (Rp) <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
+                type="text"
                 name="tarif"
-                value={formData.tarif || ''}
+                value={formatRupiahInput(formData.tarif)}
                 onChange={onChange}
-                min="0"
+                inputMode="numeric"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
-                placeholder="Contoh: 150000"
+                placeholder="Rp 150.000"
                 required
               />
             </div>

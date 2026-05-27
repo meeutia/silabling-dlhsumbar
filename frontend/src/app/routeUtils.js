@@ -58,7 +58,7 @@ export function getRouteStatusRegistrationId(route = null) {
 
 export function getRouteAdminPermohonanRegistrationId(route = null) {
   if (route?.kind !== 'app') return '';
-  if (route.role !== 'admin') return '';
+  if (!['admin', 'psp'].includes(route.role)) return '';
   if (route.page !== 'permohonan') return '';
   return String(route.extra?.[0] || '').trim();
 }

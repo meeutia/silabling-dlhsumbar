@@ -29,6 +29,7 @@ const {
 } = require('../../models/Associations');
 const { generateId } = require('../../utils/id-generator');
 const { buildInvoiceSummary, getAvailablePaymentMethods } = require('../payment/payment.service');
+const FpplDocumentService = require('../fppl/fppl-document.service');
 const RequestStatus = require('../../constants/request-status');
 const Roles = require('../../constants/roles');
 const WorkflowLogService = require('../workflow/workflow-log.service');
@@ -518,6 +519,20 @@ const detailRequest = async (requestId, userNik, role) => {
     responseData.biayaSampling = responseData.invoice?.biayaSampling ?? responseData.invoice?.rincian?.biayaSampling ?? null;
     responseData.biaya_sampling = responseData.biayaSampling;
     responseData.paymentMethods = getAvailablePaymentMethods();
+
+    const canEnsureFpplDocument = [Roles.ADMIN, Roles.PSP].includes(role);
+    const currentFpplFile = responseData.file_fppl || responseData.fileFppl || '';
+
+    if (canEnsureFpplDocument && !currentFpplFile) {
+        const fpplDocument = await FpplDocumentService.tryGenerateFpplPdfIfReady(requestId, {
+            actorNik: userNik,
+        });
+
+        if (fpplDocument?.file_fppl) {
+            responseData.file_fppl = fpplDocument.file_fppl;
+            responseData.fileFppl = fpplDocument.file_fppl;
+        }
+    }
 
     const activityLogs = await WorkflowLogService.getRequestTimeline(requestId);
     responseData.aktivitas_sistem_logs = activityLogs;

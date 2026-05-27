@@ -17,9 +17,20 @@ export function DashboardErrorBanner({ message, className = '' }) {
 export function DashboardMetricCard({ metric, loading = false }) {
   const Icon = metric.icon;
   const value = loading ? '...' : formatNumber(metric.value ?? 0, '0');
+  const isClickable = typeof metric.onClick === 'function' && !loading;
+  const CardElement = isClickable ? 'button' : 'div';
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+    <CardElement
+      type={isClickable ? 'button' : undefined}
+      onClick={isClickable ? metric.onClick : undefined}
+      title={isClickable ? metric.actionLabel || `Buka ${metric.label}` : undefined}
+      className={`w-full rounded-xl border border-gray-200 bg-white p-6 text-left shadow-sm transition-all hover:shadow-md ${
+        isClickable
+          ? 'cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 hover:-translate-y-0.5'
+          : ''
+      }`}
+    >
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="mb-1 text-sm text-gray-600">{metric.label}</p>
@@ -39,7 +50,7 @@ export function DashboardMetricCard({ metric, loading = false }) {
           </span>
         ) : null}
       </div>
-    </div>
+    </CardElement>
   );
 }
 

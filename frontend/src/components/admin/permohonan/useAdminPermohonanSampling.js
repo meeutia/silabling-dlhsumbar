@@ -137,10 +137,13 @@ export function useAdminPermohonanSampling({
 
     if (validationMessage) {
       setSampleReceiptError(validationMessage);
-      showWarning(validationMessage);
+      window.setTimeout(() => {
+        sampelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
       return;
     }
 
+    setSampleReceiptError('');
     setSaving(true);
 
     try {
@@ -163,7 +166,12 @@ export function useAdminPermohonanSampling({
         sampleDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 120);
     } catch (error) {
-      showError(error?.message || 'Gagal terhubung ke server.');
+      const message = error?.message || 'Gagal terhubung ke server.';
+      setSampleReceiptError(message);
+      window.setTimeout(() => {
+        sampelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+      showError(message);
     } finally {
       setSaving(false);
     }
@@ -245,6 +253,7 @@ export function useAdminPermohonanSampling({
       setExpandedSection('jadwal');
     } else if (
       normalizedStatus === FPPL_STATUSES.PROSES_PENGUJIAN ||
+      normalizedStatus === FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU ||
       normalizedStatus === FPPL_STATUSES.SELESAI
     ) {
       setExpandedSection('timeline');

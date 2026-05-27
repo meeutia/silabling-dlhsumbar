@@ -227,7 +227,8 @@ const saveSamplingSchedule = async (req, res) => {
     const data = await RequestWorkflowService.saveSamplingSchedule(
       id,
       tanggal_jadwal || scheduleDate || tanggal,
-      jam_jadwal || scheduleTime || jam
+      jam_jadwal || scheduleTime || jam,
+      req.user?.nik || null
     );
 
     const msg = data.actionType === 'created'
@@ -250,7 +251,8 @@ const createOrUpdateSamplingSchedule = async (req, res) => {
       idRegistrasi: id,
       tanggalPengambilan,
       jamPengambilan,
-      idPegawaiPcc
+      idPegawaiPcc,
+      actorNik: req.user?.nik || null
     });
 
     try {

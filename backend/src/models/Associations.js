@@ -5,6 +5,7 @@ const User = require('./User');
 const Pelanggan = require('./Pelanggan');
 const Pegawai = require('./Pegawai');
 const TarifPengambilan = require('./TarifPengambilan');
+const RekeningPembayaran = require('./RekeningPembayaran');
 const Fppl = require('./Fppl');
 const JadwalSampel = require('./JadwalSampel');
 const JenisSampel = require('./JenisSampel');
@@ -38,6 +39,7 @@ const PengajuanPerubahanJadwal = require('./PengajuanPerubahanJadwal');
 const TipeNotifikasi = require('./TipeNotifikasi');
 const NotifikasiEmail = require('./NotifikasiEmail');
 const AktivitasSistemLog = require('./AktivitasSistemLog');
+const UserRefreshSession = require('./UserRefreshSession');
 
 // AUTH, USER, PEGAWAI, PELANGGAN
 Role.hasMany(User, { foreignKey: 'id_role' });
@@ -46,6 +48,37 @@ User.hasOne(Pegawai, { foreignKey: 'nik' });
 Pegawai.belongsTo(User, { foreignKey: 'nik' });
 User.hasMany(Pelanggan, { foreignKey: 'nik' });
 Pelanggan.belongsTo(User, { foreignKey: 'nik' });
+
+User.hasMany(UserRefreshSession, {
+  foreignKey: 'nik',
+  as: 'refresh_sessions',
+});
+
+UserRefreshSession.belongsTo(User, {
+  foreignKey: 'nik',
+  as: 'user',
+});
+
+
+User.hasMany(RekeningPembayaran, {
+  foreignKey: 'created_by',
+  as: 'rekening_pembayaran_dibuat',
+});
+
+RekeningPembayaran.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'pembuat_rekening',
+});
+
+User.hasMany(RekeningPembayaran, {
+  foreignKey: 'updated_by',
+  as: 'rekening_pembayaran_diubah',
+});
+
+RekeningPembayaran.belongsTo(User, {
+  foreignKey: 'updated_by',
+  as: 'pengubah_rekening',
+});
 
 // PELANGGAN, FPPL, SAMPEL
 Pelanggan.hasMany(Fppl, { foreignKey: 'id_pelanggan', as: 'permintaan' });
@@ -298,4 +331,4 @@ AktivitasSistemLog.belongsTo(User, {
   as: 'pembuat_aktivitas',
 });
 
-module.exports = { sequelize, Role, User, Pelanggan, Pegawai, TarifPengambilan, Fppl, JadwalSampel, JenisSampel, FpplSampel, RegBm, PktBm, PktBmParam, PktBmPm, KategoriParameter, Parameter, Metode, ParameterMetode, FpplParameterMetode, Sampel, SampelParameter, Penugasan, PenugasanDetail, PenugasanItem, Lka, LkaHasil, LkaRevisi, LkaRevisiItem, Lhu, LhuSampel, DetailLhu, Invoice, InvoiceItem, Payment, JadwalPengambilanLhu, PengajuanPerubahanJadwal, TipeNotifikasi, NotifikasiEmail, AktivitasSistemLog };
+module.exports = { sequelize, Role, User, Pelanggan, Pegawai, TarifPengambilan, RekeningPembayaran, Fppl, JadwalSampel, JenisSampel, FpplSampel, RegBm, PktBm, PktBmParam, PktBmPm, KategoriParameter, Parameter, Metode, ParameterMetode, FpplParameterMetode, Sampel, SampelParameter, Penugasan, PenugasanDetail, PenugasanItem, Lka, LkaHasil, LkaRevisi, LkaRevisiItem, Lhu, LhuSampel, DetailLhu, Invoice, InvoiceItem, Payment, JadwalPengambilanLhu, PengajuanPerubahanJadwal, TipeNotifikasi, NotifikasiEmail, AktivitasSistemLog, UserRefreshSession };

@@ -1,6 +1,5 @@
 const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
 
 const {
   sequelize,
@@ -9,14 +8,20 @@ const {
   Pegawai,
   Pelanggan,
   Fppl,
+  UserRefreshSession,
 } = require('../models/Associations');
 
 const { generateId } = require('../utils/id-generator');
 const Roles = require('../constants/roles');
+const { assertPasswordPolicy, generateTemporaryPassword } = require('../utils/password-policy.util');
 
 const STAFF_ROLE_LABEL_TO_ID = {
   Admin: Roles.ADMIN,
+  'Kepala Sub Bagian Tata Usaha': Roles.ADMIN,
+  'Kasubag TU': Roles.ADMIN,
   'Petugas Pendaftaran': Roles.ADMIN,
+  'Pengelola Sampel Pengujian': Roles.PSP,
+  PSP: Roles.PSP,
   'Kasi Pengujian': Roles.KASI,
   Penyelia: Roles.PENYELIA,
   Analis: Roles.ANALIS,
@@ -25,10 +30,12 @@ const STAFF_ROLE_LABEL_TO_ID = {
   'Kepala Lab': Roles.KALAB,
   'Kepala Laboratorium': Roles.KALAB,
   PCC: Roles.ADMIN,
+  PPS: Roles.ADMIN,
 };
 
 const ROLE_ID_TO_LABEL = {
-  [Roles.ADMIN]: 'Admin',
+  [Roles.ADMIN]: 'Kepala Sub Bagian Tata Usaha',
+  [Roles.PSP]: 'Pengelola Sampel Pengujian',
   [Roles.KASI]: 'Kasi Pengujian',
   [Roles.PENYELIA]: 'Penyelia',
   [Roles.ANALIS]: 'Analis',
@@ -37,8 +44,20 @@ const ROLE_ID_TO_LABEL = {
   [Roles.CUSTOMER]: 'Pelanggan',
 };
 
+const ROLE_MASTER = {
+  [Roles.CUSTOMER]: 'Pelanggan',
+  [Roles.ADMIN]: 'Kepala Sub Bagian Tata Usaha',
+  [Roles.KASI]: 'Kasi Pengujian',
+  [Roles.PENYELIA]: 'Penyelia',
+  [Roles.ANALIS]: 'Analis',
+  [Roles.QC]: 'Pengendalian Mutu',
+  [Roles.KALAB]: 'Kepala Laboratorium',
+  [Roles.PSP]: 'Pengelola Sampel Pengujian',
+};
+
 const STAFF_ROLE_ORDER = [
   Roles.ADMIN,
+  Roles.PSP,
   Roles.KALAB,
   Roles.KASI,
   Roles.QC,
@@ -47,7 +66,7 @@ const STAFF_ROLE_ORDER = [
 ];
 
 const STAFF_ROLE_FALLBACK_ORDER = STAFF_ROLE_ORDER.length + 10;
-const PCC_ROLE_ORDER = STAFF_ROLE_ORDER.length + 1;
+const PPS_ROLE_ORDER = STAFF_ROLE_ORDER.length + 1;
 const STAFF_WITHOUT_ACCOUNT_ORDER = STAFF_ROLE_ORDER.length + 2;
 
 function normalizeText(value) {
@@ -72,8 +91,8 @@ function statusLabel(isActive) {
 }
 
 function getStaffRoleOrderValue(row = {}) {
-  if (Number(row.is_pcc || 0) === 1 || normalizeText(row.role) === 'PCC') {
-    return PCC_ROLE_ORDER;
+  if (Number(row.is_pcc || 0) === 1 || ['PCC', 'PPS'].includes(normalizeText(row.role))) {
+    return PPS_ROLE_ORDER;
   }
 
   const idRole = normalizeText(row.id_role);
@@ -128,7 +147,7 @@ function validateEmail(email) {
 }
 
 function generateRandomPassword() {
-  return crypto.randomBytes(8).toString('base64url');
+  return generateTemporaryPassword();
 }
 
 async function hashPassword(password) {
@@ -144,6 +163,7 @@ function getStaffRoleId(role) {
   if (
     [
       Roles.ADMIN,
+      Roles.PSP,
       Roles.KASI,
       Roles.PENYELIA,
       Roles.ANALIS,
@@ -157,6 +177,21 @@ function getStaffRoleId(role) {
   throw new Error('Role petugas tidak valid.');
 }
 
+async function ensureRoleMaster(roleId, transaction = null) {
+  const idRole = normalizeText(roleId);
+  const namaRole = ROLE_MASTER[idRole];
+
+  if (!namaRole) {
+    throw new Error('Role petugas tidak valid.');
+  }
+
+  await Role.findOrCreate({
+    where: { id_role: idRole },
+    defaults: { id_role: idRole, nama_role: namaRole },
+    transaction,
+  });
+}
+
 function buildPasswordFromPayload(data = {}) {
   const passwordMode = normalizeText(data.passwordMode || data.password_mode || 'generate');
 
@@ -164,10 +199,10 @@ function buildPasswordFromPayload(data = {}) {
     const password = String(data.password || '');
     const confirmPassword = String(data.confirmPassword || data.confirm_password || '');
 
-    if (!password || password.length < 6) throw new Error('Password minimal 6 karakter.');
-    if (confirmPassword && password !== confirmPassword) throw new Error('Konfirmasi password tidak sesuai.');
+    const normalizedPassword = assertPasswordPolicy(password);
+    if (confirmPassword && normalizedPassword !== confirmPassword) throw new Error('Konfirmasi password tidak sesuai.');
 
-    return { password, isGenerated: false };
+    return { password: normalizedPassword, isGenerated: false };
   }
 
   return { password: generateRandomPassword(), isGenerated: true };
@@ -207,7 +242,7 @@ async function ensureUniqueUser({ nik, username, email, excludeNik = null }, tra
 
 function mapStaffRow(row) {
   const hasAccount = Boolean(row.nik && row.username);
-  const roleLabel = row.is_pcc ? 'PCC' : ROLE_ID_TO_LABEL[row.id_role] || row.nama_role || row.id_role || 'Petugas';
+  const roleLabel = row.is_pcc ? 'PPS' : ROLE_ID_TO_LABEL[row.id_role] || row.nama_role || row.id_role || 'Petugas';
 
   return {
     id: row.id_pegawai || row.nik,
@@ -337,6 +372,10 @@ function flattenCustomer(customerInstance) {
 }
 
 async function listRoles() {
+  await Promise.all(
+    Object.keys(ROLE_MASTER).map((roleId) => ensureRoleMaster(roleId))
+  );
+
   const rows = await Role.findAll({
     attributes: ['id_role', 'nama_role'],
     order: [['id_role', 'ASC']],
@@ -363,7 +402,7 @@ async function listStaff(query = {}) {
   let rows = pegawaiRows.map(flattenStaffPegawai);
 
   if (role && role !== 'Semua') {
-    if (role === 'PCC') {
+    if (role === 'PCC' || role === 'PPS') {
       rows = rows.filter((row) => Number(row.is_pcc || 0) === 1);
     } else {
       const roleId = getStaffRoleId(role);
@@ -445,7 +484,7 @@ async function createStaff(data = {}) {
       data.has_account === false ||
       data.hasAccount === 'false' ||
       data.has_account === 'false' ||
-      normalizeText(data.role) === 'PCC'
+      ['PCC', 'PPS'].includes(normalizeText(data.role))
     );
 
     const name = normalizeText(data.name || data.nama_pegawai);
@@ -454,7 +493,7 @@ async function createStaff(data = {}) {
     const phone = normalizeText(data.phone || data.no_wa).replace(/\D/g, '').slice(0, 13);
     const nip = normalizeText(data.nip).slice(0, 18);
     const jabatan = normalizeJabatan(data.jabatan || data.position);
-    const isPcc = normalizeText(data.role) === 'PCC' || Number(data.is_pcc || data.isPcc || 0) === 1 || /^pcc$/i.test(jabatan) ? 1 : 0;
+    const isPcc = ['PCC', 'PPS'].includes(normalizeText(data.role)) || Number(data.is_pcc || data.isPcc || 0) === 1 || /^(pcc|pps)$/i.test(jabatan) || /^petugas pengambil sampel$/i.test(jabatan) ? 1 : 0;
 
     if (!hasAccount) {
       const idPegawai =
@@ -490,6 +529,7 @@ async function createStaff(data = {}) {
     const email = validateEmail(data.email);
     const roleId = getStaffRoleId(data.role || data.id_role);
 
+    await ensureRoleMaster(roleId, transaction);
     await ensureUniqueUser({ nik, username, email }, transaction);
 
     const { password, isGenerated } = buildPasswordFromPayload(data);
@@ -537,10 +577,24 @@ async function setStaffStatus(nik, isActive) {
   const staff = await getStaffByNik(nik);
   if (!staff.has_account && !staff.hasAccount) throw new Error('Petugas ini tidak memiliki akun login.');
   const userNik = validateNik(staff.nik);
+  const nextActive = Number(isActive) === 1 ? 1 : 0;
+
+  if (nextActive === 0 && staff.id_role === Roles.ADMIN) {
+    const activeAdminCount = await User.count({
+      where: {
+        id_role: Roles.ADMIN,
+        is_active: 1,
+      },
+    });
+
+    if (activeAdminCount <= 1) {
+      throw new Error('Minimal harus ada 1 akun Kepala Sub Bagian Tata Usaha aktif.');
+    }
+  }
 
   await User.update(
     {
-      is_active: Number(isActive) === 1 ? 1 : 0,
+      is_active: nextActive,
       refresh_token_hash: null,
       refresh_token_expires_at: null,
     },
@@ -557,10 +611,9 @@ async function resetStaffPassword(nik, data = {}) {
   if (!staff.has_account && !staff.hasAccount) throw new Error('Petugas ini tidak memiliki akun login.');
   const userNik = validateNik(staff.nik);
 
-  const password =
-    data.password && String(data.password).length >= 6
-      ? String(data.password)
-      : generateRandomPassword();
+  const password = data.password
+    ? assertPasswordPolicy(data.password)
+    : generateRandomPassword();
 
   const hashedPassword = await hashPassword(password);
 
@@ -573,6 +626,11 @@ async function resetStaffPassword(nik, data = {}) {
     {
       where: { nik: userNik },
     }
+  );
+
+  await UserRefreshSession.update(
+    { revoked_at: new Date() },
+    { where: { nik: userNik, revoked_at: null } }
   );
 
   return {
@@ -656,7 +714,7 @@ async function setCustomerStatus(idPelanggan, isActive) {
 
   await User.update(
     {
-      is_active: Number(isActive) === 1 ? 1 : 0,
+      is_active: nextActive,
       refresh_token_hash: null,
       refresh_token_expires_at: null,
     },
@@ -674,10 +732,9 @@ async function resetCustomerPassword(idPelanggan, data = {}) {
     throw new Error('Pelanggan ini belum memiliki akun portal mandiri.');
   }
 
-  const password =
-    data.password && String(data.password).length >= 6
-      ? String(data.password)
-      : generateRandomPassword();
+  const password = data.password
+    ? assertPasswordPolicy(data.password)
+    : generateRandomPassword();
 
   const hashedPassword = await hashPassword(password);
 
@@ -690,6 +747,11 @@ async function resetCustomerPassword(idPelanggan, data = {}) {
     {
       where: { nik: customer.nik },
     }
+  );
+
+  await UserRefreshSession.update(
+    { revoked_at: new Date() },
+    { where: { nik: customer.nik, revoked_at: null } }
   );
 
   return {

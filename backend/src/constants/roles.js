@@ -5,5 +5,6 @@ module.exports = {
   PENYELIA: 'RL-004',
   ANALIS: 'RL-005',
   QC: 'RL-006',
-  KALAB: 'RL-007'
+  KALAB: 'RL-007',
+  PSP: 'RL-008'
 };

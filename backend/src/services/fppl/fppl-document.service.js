@@ -25,7 +25,7 @@ const LOGO_PATH = path.join(PUBLIC_DIR, 'assets/logos/logo-sumbar.jpg');
 const FONT_REGULAR_PATH = path.join(__dirname, '../../assets/fonts/CenturyGothic.ttf');
 const FONT_BOLD_PATH = path.join(__dirname, '../../assets/fonts/CenturyGothic-Bold.ttf');
 
-const FINAL_SAMPLE_SCHEDULE_STATUSES = ['Disetujui Pelanggan', 'Disetujui Admin', 'Selesai'];
+const FINAL_SAMPLE_SCHEDULE_STATUSES = ['Terjadwal', 'Disetujui Pelanggan', 'Disetujui Admin', 'Selesai'];
 const CLEARED_INVOICE_STATUSES = ['Lunas', 'Bayar Nanti'];
 const FPPL_SIGNER_JABATAN = {
   KASUBAG_TU: 'Kepala Sub Bagian Tata Usaha',
@@ -165,7 +165,22 @@ function getMethodReference(row = {}) {
   return pm.acuan_metode || pm.acuanMetode || '-';
 }
 
-async function loadFpplSigners() {
+async function loadScheduleCreatorSigner(schedule = null) {
+  const creatorNik = String(schedule?.dibuat_oleh || schedule?.dibuatOleh || '').trim();
+
+  if (!creatorNik || !Pegawai || typeof Pegawai.findOne !== 'function') {
+    return null;
+  }
+
+  const creator = await Pegawai.findOne({
+    where: { nik: creatorNik },
+    attributes: ['id_pegawai', 'nik', 'nama_pegawai', 'jabatan'],
+  });
+
+  return getPlain(creator);
+}
+
+async function loadFpplSigners(schedule = null) {
   if (!Pegawai || typeof Pegawai.findAll !== 'function') {
     return {};
   }
@@ -178,7 +193,7 @@ async function loadFpplSigners() {
     order: [['jabatan', 'ASC'], ['id_pegawai', 'ASC']],
   });
 
-  return rows.reduce((acc, item) => {
+  const signers = rows.reduce((acc, item) => {
     const row = getPlain(item) || {};
     const jabatan = String(row.jabatan || '').trim();
 
@@ -192,6 +207,13 @@ async function loadFpplSigners() {
 
     return acc;
   }, {});
+
+  const scheduleCreator = await loadScheduleCreatorSigner(schedule);
+  if (scheduleCreator?.nama_pegawai) {
+    signers.PENGELOLA_SAMPEL = scheduleCreator;
+  }
+
+  return signers;
 }
 
 function getSignerName(signer = {}) {
@@ -260,7 +282,7 @@ async function loadFpplData(idRegistrasi) {
         model: JadwalSampel,
         as: 'jadwal_sampels',
         required: false,
-        attributes: ['id_jadwal', 'tanggal_jadwal', 'jam_jadwal', 'status_jadwal', 'dibuat_pada'],
+        attributes: ['id_jadwal', 'tanggal_jadwal', 'jam_jadwal', 'status_jadwal', 'dibuat_oleh', 'dibuat_pada'],
         where: { status_jadwal: { [Op.ne]: 'Dibatalkan' } },
       },
       {
@@ -313,12 +335,13 @@ async function loadFpplData(idRegistrasi) {
   const latestInvoice = invoices
     .slice()
     .sort((a, b) => String(b.tanggal_invoice || '').localeCompare(String(a.tanggal_invoice || '')))[0] || null;
-  const signers = await loadFpplSigners();
+  const schedule = getActiveFinalSampleSchedule(plain);
+  const signers = await loadFpplSigners(schedule);
 
   return {
     request: plain,
     pelanggan: plain.pelanggan || plain.Pelanggan || {},
-    schedule: getActiveFinalSampleSchedule(plain),
+    schedule,
     invoice: latestInvoice,
     groups: groupParameterRows(plain),
     signers,
@@ -349,7 +372,7 @@ function assertCanGenerateFppl(data) {
   }
 
   if (!getSignerName(data.signers?.PENGELOLA_SAMPEL)) {
-    throw new Error("Penandatangan FPPL Pengelola Sampel Pengujian belum dikonfigurasi di data pegawai. Isi pegawai.jabatan = 'Pengelola Sampel Pengujian'.");
+    throw new Error("Penandatangan FPPL Pengelola Sampel Pengujian belum dapat ditentukan. Pastikan jadwal sampel memiliki dibuat_oleh yang terhubung ke pegawai, atau isi satu pegawai fallback dengan jabatan = 'Pengelola Sampel Pengujian'.");
   }
 }
 

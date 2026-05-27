@@ -1,4 +1,5 @@
 const { errorResponse } = require('../utils/response');
+const { validatePasswordPolicy } = require('../utils/password-policy.util');
 
 const validateRegister = (req, res, next) => {
     const { nik, username, email, password } = req.body;
@@ -24,8 +25,9 @@ const validateRegister = (req, res, next) => {
         return errorResponse(res, 'Format email tidak valid.', 400);
     }
 
-    if (String(password).length < 6) {
-        return errorResponse(res, 'Password minimal 6 karakter.', 400);
+    const passwordValidation = validatePasswordPolicy(password);
+    if (!passwordValidation.valid) {
+        return errorResponse(res, passwordValidation.message, 400);
     }
 
     req.body.nik = normalizedNik;

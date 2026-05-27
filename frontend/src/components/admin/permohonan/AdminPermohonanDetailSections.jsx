@@ -1,4 +1,4 @@
-import { CheckCircle, ChevronDown, ChevronUp, Clock, FileText } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp, Clock, FileText, Loader2 } from 'lucide-react';
 import {
   formatCurrency,
   getAccreditationLabel,
@@ -430,7 +430,9 @@ export function FpplDocumentSection({
   selectedRequest,
   expandedSection,
   toggleSection,
+  saving = false,
   openGeneratedFile,
+  handleGenerateFppl,
 }) {
   const filePath = selectedRequest?.file_fppl || selectedRequest?.fileFppl || '';
   const nomorFppl = selectedRequest?.nomor_fppl || selectedRequest?.nomorFppl || '-';
@@ -451,7 +453,7 @@ export function FpplDocumentSection({
       {expandedSection === 'dokumen-fppl' && (
         <div className="px-6 pb-6">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-12   md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm font-semibold text-emerald-800">FPPL Admin</p>
                 <p className="mt-1 text-sm text-gray-700">
@@ -476,7 +478,17 @@ export function FpplDocumentSection({
                   <FileText className="h-4 w-4" />
                   Buka FPPL
                 </button>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleGenerateFppl}
+                  disabled={saving || typeof handleGenerateFppl !== 'function'}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                  Generate FPPL
+                </button>
+              )}
             </div>
           </div>
         </div>

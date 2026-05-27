@@ -6,6 +6,8 @@ const ScheduleChangeController = require('../controllers/schedule-change.control
 const { verifyToken, authorizeRoles } = require('../middlewares/auth');
 const { uploadPaymentProofFile } = require('../middlewares/upload.middleware');
 const Roles = require('../constants/roles');
+
+const ADMIN_LIKE_ROLES = [Roles.ADMIN, Roles.PSP];
 const {
   validateCreateRequest,
   validateVerifyRequest,
@@ -24,39 +26,39 @@ const {
 router.use(verifyToken);
 
 
-router.get('/schedule-changes', authorizeRoles(Roles.ADMIN), ScheduleChangeController.listScheduleChangeRequests);
+router.get('/schedule-changes', authorizeRoles(...ADMIN_LIKE_ROLES), ScheduleChangeController.listScheduleChangeRequests);
 router.post('/schedule-changes', authorizeRoles(Roles.CUSTOMER), validateScheduleChangeRequest, ScheduleChangeController.createScheduleChangeRequest);
-router.post('/schedule-changes/:idPengajuan/decision', authorizeRoles(Roles.ADMIN), validateScheduleChangeDecision, ScheduleChangeController.decideScheduleChangeRequest);
-router.post('/schedule-changes/:idPengajuan/cancel', authorizeRoles(Roles.CUSTOMER, Roles.ADMIN), ScheduleChangeController.cancelScheduleChangeRequest);
+router.post('/schedule-changes/:idPengajuan/decision', authorizeRoles(...ADMIN_LIKE_ROLES), validateScheduleChangeDecision, ScheduleChangeController.decideScheduleChangeRequest);
+router.post('/schedule-changes/:idPengajuan/cancel', authorizeRoles(Roles.CUSTOMER, ...ADMIN_LIKE_ROLES), ScheduleChangeController.cancelScheduleChangeRequest);
 
 router.route('/')
   .post(authorizeRoles(Roles.CUSTOMER), validateCreateRequest, CustomerRequestController.createRequest)
-  .get(authorizeRoles(Roles.CUSTOMER, Roles.ADMIN, Roles.KASI, Roles.PENYELIA), CustomerRequestController.listRequests);
+  .get(authorizeRoles(Roles.CUSTOMER, ...ADMIN_LIKE_ROLES, Roles.KASI, Roles.PENYELIA), CustomerRequestController.listRequests);
 
 router.get('/analysts/options', authorizeRoles(Roles.PENYELIA), RequestWorkflowController.getAnalystOptions);
 
-router.get('/:id/activity-logs', authorizeRoles(Roles.CUSTOMER, Roles.ADMIN, Roles.KASI, Roles.PENYELIA), validateRequestIdParam, CustomerRequestController.getRequestActivityLogs);
+router.get('/:id/activity-logs', authorizeRoles(Roles.CUSTOMER, ...ADMIN_LIKE_ROLES, Roles.KASI, Roles.PENYELIA), validateRequestIdParam, CustomerRequestController.getRequestActivityLogs);
 
-router.get('/:id/invoice/pdf', authorizeRoles(Roles.CUSTOMER, Roles.ADMIN, Roles.KASI), validateRequestIdParam, CustomerRequestController.downloadInvoicePdf);
-router.get('/:id/fppl/pdf', authorizeRoles(Roles.ADMIN), validateRequestIdParam, RequestWorkflowController.downloadFpplDocument);
-router.post('/:id/fppl/generate', authorizeRoles(Roles.ADMIN), validateRequestIdParam, RequestWorkflowController.generateFpplDocument);
+router.get('/:id/invoice/pdf', authorizeRoles(Roles.CUSTOMER, ...ADMIN_LIKE_ROLES, Roles.KASI), validateRequestIdParam, CustomerRequestController.downloadInvoicePdf);
+router.get('/:id/fppl/pdf', authorizeRoles(...ADMIN_LIKE_ROLES), validateRequestIdParam, RequestWorkflowController.downloadFpplDocument);
+router.post('/:id/fppl/generate', authorizeRoles(...ADMIN_LIKE_ROLES), validateRequestIdParam, RequestWorkflowController.generateFpplDocument);
 
 router.route('/:id')
-  .get(authorizeRoles(Roles.CUSTOMER, Roles.ADMIN, Roles.KASI, Roles.PENYELIA), validateRequestIdParam, CustomerRequestController.detailRequest)
+  .get(authorizeRoles(Roles.CUSTOMER, ...ADMIN_LIKE_ROLES, Roles.KASI, Roles.PENYELIA), validateRequestIdParam, CustomerRequestController.detailRequest)
   .put(authorizeRoles(Roles.CUSTOMER), validateRequestIdParam, validateCreateRequest, CustomerRequestController.updateRequest);
 
 router.post('/:id/schedule-confirmation', authorizeRoles(Roles.CUSTOMER), validateRequestIdParam, validateScheduleConfirmation, ScheduleChangeController.confirmScheduleApproval);
 
 router.post('/:id/payment', authorizeRoles(Roles.CUSTOMER), validateRequestIdParam, validateCustomerPaymentAction, CustomerRequestController.processPaymentDecision);
 router.post('/:id/payment/confirm', authorizeRoles(Roles.CUSTOMER), validateRequestIdParam, uploadPaymentProofFile, CustomerRequestController.confirmPaymentSubmitted);
-router.post('/:id/payment/verify', authorizeRoles(Roles.ADMIN), validateRequestIdParam, RequestWorkflowController.verifyManualPayment);
-router.post('/:id/payment/deferred', authorizeRoles(Roles.ADMIN, Roles.KASI), validateRequestIdParam, validateDeferredPaymentNote, RequestWorkflowController.markDeferredPayment);
+router.post('/:id/payment/verify', authorizeRoles(...ADMIN_LIKE_ROLES), validateRequestIdParam, RequestWorkflowController.verifyManualPayment);
+router.post('/:id/payment/deferred', authorizeRoles(...ADMIN_LIKE_ROLES, Roles.KASI), validateRequestIdParam, validateDeferredPaymentNote, RequestWorkflowController.markDeferredPayment);
 
-router.route('/:id/sampling-schedule').post(authorizeRoles(Roles.ADMIN), validateRequestIdParam, validateSamplingSchedule, RequestWorkflowController.createOrUpdateSamplingSchedule).put(authorizeRoles(Roles.ADMIN), validateRequestIdParam, validateSamplingSchedule, RequestWorkflowController.createOrUpdateSamplingSchedule);
+router.route('/:id/sampling-schedule').post(authorizeRoles(...ADMIN_LIKE_ROLES), validateRequestIdParam, validateSamplingSchedule, RequestWorkflowController.createOrUpdateSamplingSchedule).put(authorizeRoles(...ADMIN_LIKE_ROLES), validateRequestIdParam, validateSamplingSchedule, RequestWorkflowController.createOrUpdateSamplingSchedule);
 
-router.post('/:id/samples/receive', authorizeRoles(Roles.ADMIN), validateRequestIdParam, validateReceiveSamples, RequestWorkflowController.receiveSamplesAndGenerateCodes);
+router.post('/:id/samples/receive', authorizeRoles(...ADMIN_LIKE_ROLES), validateRequestIdParam, validateReceiveSamples, RequestWorkflowController.receiveSamplesAndGenerateCodes);
 
-router.put('/:id/verify', authorizeRoles(Roles.ADMIN), validateRequestIdParam, validateVerifyRequest, RequestWorkflowController.verifyRequest);
+router.put('/:id/verify', authorizeRoles(...ADMIN_LIKE_ROLES), validateRequestIdParam, validateVerifyRequest, RequestWorkflowController.verifyRequest);
 
 router.route('/:id/methods').get(authorizeRoles(Roles.KASI), validateRequestIdParam, RequestWorkflowController.getKasiRequestDetail).put(authorizeRoles(Roles.KASI), validateRequestIdParam, validateAssignMethods, RequestWorkflowController.assignMethods);
 

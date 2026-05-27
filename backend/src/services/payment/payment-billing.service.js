@@ -22,7 +22,10 @@ const {
   normalizeAmount,
   resolvePaymentMethod,
 } = require('./payment-policy.util');
-const manualPaymentConfig = require('../../config/manual-payment.config');
+const {
+  getActivePaymentInstruction,
+  getActivePaymentInstructions,
+} = require('./payment-account.service');
 
 const toDateOnlyString = (value) => {
   if (!value) return null;
@@ -472,6 +475,8 @@ const buildInvoiceSummary = async (requestId, transaction = undefined) => {
   const latestPayment = getLatestPaymentRow(paymentRows);
   const paymentMethod = resolvePaymentMethod(latestPayment?.metode_bayar);
   const paymentPayload = buildPaymentSummaryPayload({ latestPayment, paymentMethod, totalTagihan });
+  const paymentInstructions = await getActivePaymentInstructions();
+  const paymentInstruction = paymentInstructions[0] || await getActivePaymentInstruction();
 
   const customerApprovalStatus = requestDecisionStatus;
 
@@ -495,8 +500,12 @@ const buildInvoiceSummary = async (requestId, transaction = undefined) => {
     subtotalUji,
     subtotalPengambilan,
     totalTagihan,
-    paymentInstruction: manualPaymentConfig,
-    payment_instruction: manualPaymentConfig,
+    paymentInstruction,
+    payment_instruction: paymentInstruction,
+    paymentInstructions,
+    payment_instructions: paymentInstructions,
+    paymentAccounts: paymentInstructions,
+    payment_accounts: paymentInstructions,
     customerApprovalStatus,
     rincian: {
       parameters: parameterItems,

@@ -16,6 +16,8 @@ export function KasiDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-amber-100 text-amber-700',
       iconBg: 'bg-amber-50',
       trend: dashboard.errorMessage ? 'Dimuat sebagian' : 'Data backend',
+      actionLabel: 'Buka permohonan pending',
+      onClick: () => onNavigate('permohonan'),
     },
     {
       label: 'Permohonan Terverifikasi',
@@ -25,6 +27,8 @@ export function KasiDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-emerald-100 text-emerald-700',
       iconBg: 'bg-emerald-50',
       trend: 'Aktif',
+      actionLabel: 'Buka permohonan terverifikasi',
+      onClick: () => onNavigate('permohonan'),
     },
     {
       label: 'LHU Pending',
@@ -34,6 +38,8 @@ export function KasiDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-blue-100 text-blue-700',
       iconBg: 'bg-blue-50',
       trend: 'Review Kasi',
+      actionLabel: 'Buka LHU pending',
+      onClick: () => onNavigate('lhu'),
     },
     {
       label: 'Total Pengujian',
@@ -43,6 +49,8 @@ export function KasiDashboardPage({ onNavigate = noopNavigate }) {
       color: 'bg-purple-100 text-purple-700',
       iconBg: 'bg-purple-50',
       trend: 'Backend',
+      actionLabel: 'Buka daftar permohonan pengujian',
+      onClick: () => onNavigate('permohonan'),
     },
   ];
 

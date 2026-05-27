@@ -47,7 +47,7 @@ export function validateSamplingScheduleForm({ selectedRequest, scheduleForm, is
   if (!timeCheck.valid) return timeCheck.reason;
 
   if (usesOfficerSampling(selectedRequest) && isBlank(scheduleForm?.idPegawaiPcc)) {
-    return 'PCC wajib dipilih untuk pengambilan sampel oleh petugas.';
+    return 'PPS wajib dipilih untuk pengambilan sampel oleh petugas.';
   }
 
   return '';
@@ -60,20 +60,34 @@ const REQUIRED_RECEIPT_FIELDS = [
   ['koordinat', 'koordinat'],
 ];
 
+function getSampleReceiptLabel(form, index) {
+  return form?.sample_label || form?.sampleLabel || `Sampel #${index + 1}`;
+}
+
 export function validateSampleReceiptForms({ sampelFormList } = {}) {
   const rows = Array.isArray(sampelFormList) ? sampelFormList : [];
 
   if (!rows.length) return 'Tidak ada sampel untuk di-generate.';
 
+  const messages = [];
+
   const isSamplingDateMissing = rows.some((form) => isBlank(form?.tanggal_pengambilan_sampel));
-  if (isSamplingDateMissing) return 'Tanggal pengambilan sampel wajib diisi.';
+  if (isSamplingDateMissing) {
+    messages.push('Tanggal pengambilan sampel wajib diisi.');
+  }
 
-  for (let index = 0; index < rows.length; index += 1) {
-    const form = rows[index] || {};
-    const label = form.sample_label || form.sampleLabel || `sampel #${index + 1}`;
+  rows.forEach((form = {}, index) => {
+    const missingFields = REQUIRED_RECEIPT_FIELDS
+      .filter(([field]) => isBlank(form[field]))
+      .map(([, label]) => label);
 
-    const missingField = REQUIRED_RECEIPT_FIELDS.find(([field]) => isBlank(form[field]));
-    if (missingField) return `Lengkapi ${missingField[1]} pada ${label}.`;
+    if (missingFields.length) {
+      messages.push(`${getSampleReceiptLabel(form, index)}: ${missingFields.join(', ')} belum diisi.`);
+    }
+  });
+
+  if (messages.length) {
+    return `Lengkapi data penerimaan sampel berikut:\n${messages.map((message) => `• ${message}`).join('\n')}`;
   }
 
   return '';

@@ -44,7 +44,7 @@ export function Sidebar({
             </div>
             <div className="min-w-0">
               <h1 className="truncate font-semibold text-gray-900">{portal.portalTitle}</h1>
-              <p className="truncate text-xs text-gray-600">{portal.portalSubtitle}</p>
+              <p className="text-xs leading-4 text-gray-600">{portal.portalSubtitle}</p>
             </div>
           </div>
 
@@ -96,7 +96,7 @@ export function Sidebar({
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-gray-900">{userName}</p>
-            <p className="truncate text-xs text-gray-600">{roleLabel}</p>
+            <p className="text-xs leading-4 text-gray-600">{roleLabel}</p>
           </div>
         </div>
         <button

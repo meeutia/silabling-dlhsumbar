@@ -194,11 +194,8 @@ export function AdminPermohonanListView({
                           <p className="font-medium text-gray-900">{getCustomerProfile(item)?.nama_instansi || '-'}</p>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">{getCustomerProfile(item)?.pic || '-'}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.jenis_pengambilan_sampel === 'Petugas' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                            {item.jenis_pengambilan_sampel || '-'}
-                          </span>
+                        <td className="px-6 py-4 text-sm text-gray-700">
+                          {item.jenis_pengambilan_sampel || '-'}
                         </td>
                         <td className="px-6 py-4">{getStatusBadge(item.status_fppl)}</td>
                         <td className="px-6 py-4 text-center">

@@ -17,7 +17,7 @@ export function KalabLhuPage({ initialLhuNumber = '' }) {
       <div className="p-4 md:p-8">
         <KalabLhuHeader />
 
-        <KalabLhuMetricCards metrics={page.dashboardMetrics} />
+        <KalabLhuMetricCards metrics={page.dashboardMetrics} onSelectTab={page.setTab} />
 
         <KalabLhuTabs activeTab={page.activeTab} onChange={page.setTab} />
 

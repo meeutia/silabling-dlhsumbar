@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getToastEventName } from '../../utils/feedback';
+import { getToastDuration, normalizeToastType } from '../../utils/toastConfig';
 import { ToastNotification } from './ToastNotification';
-
-const DEFAULT_TOAST_DURATION = 3500;
 
 export function AppToastHost() {
   const [toast, setToast] = useState(null);
@@ -12,13 +11,16 @@ export function AppToastHost() {
 
     const handleToast = (event) => {
       const detail = event.detail || {};
+      const type = normalizeToastType(detail.type || 'success');
+
       const nextToast = {
         show: true,
-        type: detail.type || 'success',
+        type,
         title: detail.title,
         message: detail.message || '',
         temporaryPassword: detail.temporaryPassword,
-        duration: detail.duration ?? DEFAULT_TOAST_DURATION,
+        duration: getToastDuration(type, detail.duration),
+        position: detail.position,
         id: detail.id || Date.now(),
       };
 
@@ -34,7 +36,7 @@ export function AppToastHost() {
 
     const timeout = window.setTimeout(() => {
       setToast(null);
-    }, toast.duration ?? DEFAULT_TOAST_DURATION);
+    }, toast.duration);
 
     return () => window.clearTimeout(timeout);
   }, [toast]);
@@ -42,6 +44,7 @@ export function AppToastHost() {
   return (
     <ToastNotification
       toast={toast}
+      position={toast?.position}
       onClose={() => setToast(null)}
     />
   );

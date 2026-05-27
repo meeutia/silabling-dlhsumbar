@@ -420,7 +420,7 @@ export const getRequestTrackingSteps = (requestItem) => {
       key: 'testing',
       label: 'Proses pengujian',
       description: 'Sampel dikerjakan analis sampai LHU disahkan.',
-      done: status === FPPL_STATUSES.SELESAI || hasFinalLhu,
+      done: [FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU, FPPL_STATUSES.SELESAI].includes(status) || hasFinalLhu,
       active: status === FPPL_STATUSES.PROSES_PENGUJIAN,
     },
     {
@@ -432,7 +432,7 @@ export const getRequestTrackingSteps = (requestItem) => {
       date: pickupInfo?.tanggal_pengambilan,
       time: pickupInfo?.jam_pengambilan,
       done: Boolean(pickupInfo),
-      active: hasFinalLhu && !pickupInfo,
+      active: (status === FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU || hasFinalLhu) && !pickupInfo,
     },
     {
       key: 'completed',

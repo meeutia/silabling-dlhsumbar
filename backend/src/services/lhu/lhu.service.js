@@ -60,6 +60,94 @@ const {
   isLhuEditableByQc,
 } = require('../../constants/lhu-status.constant');
 const { buildLkaHasilRevisionResponse } = require('../assignment/assignment-revision.helper');
+const RequestStatus = require('../../constants/request-status');
+
+
+function getAssociationRows(row = {}, keys = []) {
+  for (const key of keys) {
+    const value = row?.[key];
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+}
+
+function sampleHasFinalLhu(sample = {}) {
+  const lhuRows = getAssociationRows(sample, ['lhus', 'Lhus', 'lhu', 'Lhu']);
+  return lhuRows.some((row) => String(row?.status_lhu || '').trim() === LHU_STATUS.APPROVED_FINAL);
+}
+
+async function maybeMarkRequestWaitingLhuPickup(idRegistrasi, actorNik, transaction) {
+  const requestId = String(idRegistrasi || '').trim();
+  if (!requestId) return null;
+
+  const fpplInstance = await Fppl.findOne({
+    where: { id_registrasi: requestId },
+    include: [
+      {
+        model: FpplSampel,
+        as: 'fppl_sampels',
+        required: false,
+        include: [
+          {
+            model: Sampel,
+            as: 'sampels',
+            required: false,
+            include: [
+              {
+                model: Lhu,
+                as: 'lhus',
+                required: false,
+                through: { attributes: [] },
+                attributes: ['nomor_lhu', 'id_registrasi', 'status_lhu'],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    transaction,
+    lock: transaction?.LOCK?.UPDATE,
+  });
+
+  if (!fpplInstance) return null;
+
+  const currentStatus = String(fpplInstance.status_fppl || '').trim();
+  if (currentStatus !== RequestStatus.TESTING_PROCESS) {
+    return { changed: false, status: currentStatus };
+  }
+
+  const fppl = getPlain(fpplInstance);
+  const fpplSampelRows = getAssociationRows(fppl, ['fppl_sampels', 'FpplSampels', 'fppl_sampel', 'FpplSampel']);
+  const sampleRows = fpplSampelRows.flatMap((row) => getAssociationRows(row, ['sampels', 'Sampels', 'sampel', 'Sampel']));
+
+  if (sampleRows.length === 0) {
+    return { changed: false, status: currentStatus };
+  }
+
+  const allSamplesHaveFinalLhu = sampleRows.every(sampleHasFinalLhu);
+  if (!allSamplesHaveFinalLhu) {
+    return { changed: false, status: currentStatus };
+  }
+
+  await fpplInstance.update(
+    { status_fppl: RequestStatus.WAITING_LHU_PICKUP },
+    { transaction }
+  );
+
+  await WorkflowLogService.logStatusTransition({
+    entityType: 'FPPL',
+    entityId: requestId,
+    action: 'LHU_SIAP_DIAMBIL',
+    statusBefore: currentStatus,
+    statusAfter: RequestStatus.WAITING_LHU_PICKUP,
+    source: 'Kalab',
+    note: 'Seluruh LHU pada permohonan sudah disahkan Kalab. Permohonan menunggu pengambilan LHU.',
+    actorNik,
+    transaction,
+  });
+
+  return { changed: true, status: RequestStatus.WAITING_LHU_PICKUP };
+}
 
 async function getLhuDetail(nomorLhu) {
   const lhuNo = String(nomorLhu || '').trim();
@@ -253,6 +341,12 @@ async function approveByKalab(nomorLhu, currentNik) {
       transaction,
     });
 
+    const requestStatusResult = await maybeMarkRequestWaitingLhuPickup(
+      lhu.id_registrasi,
+      userNik,
+      transaction
+    );
+
     return {
       nomorLhu: lhuNo,
       nomor_lhu: lhuNo,
@@ -260,6 +354,8 @@ async function approveByKalab(nomorLhu, currentNik) {
       status_lhu: LHU_STATUS.APPROVED_FINAL,
       fileLhuPath: pdfResult.filePath,
       file_lhu_path: pdfResult.filePath,
+      statusFppl: requestStatusResult?.status || null,
+      status_fppl: requestStatusResult?.status || null,
     };
   });
 }

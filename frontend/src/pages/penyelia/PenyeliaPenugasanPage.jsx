@@ -39,6 +39,7 @@ export function PenyeliaPenugasanPage({ onViewDetail }) {
           totalMonitorGroups={totalMonitorGroups}
           totalSubkontrakGroups={totalSubkontrakGroups}
           loading={page.loadingPending || page.loadingMonitor || page.loadingSubkontrak}
+          onSelectTab={page.setActiveTab}
         />
 
         <PenyeliaPenugasanSearchPanel

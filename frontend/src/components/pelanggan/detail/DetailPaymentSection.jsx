@@ -6,9 +6,69 @@ import {
   DollarSign,
   Eye,
   FileText,
+  FileUp,
+  Image as ImageIcon,
   MessageCircle,
+  UploadCloud,
+  X,
 } from 'lucide-react';
 import { FPPL_STATUSES } from '../../../utils/fpplStatus';
+
+function normalizePaymentInstruction(row = {}) {
+  const bankName = row.bankName || row.bank_name || row.namaBank || row.nama_bank || '';
+  const accountNumber = row.accountNumber || row.account_number || row.nomorRekening || row.nomor_rekening || '';
+  const accountName = row.accountName || row.account_name || row.namaPemilik || row.nama_pemilik || '';
+  const note = row.note || row.catatan || row.paymentNote || row.payment_note || '';
+  const isPrimary = Boolean(row.isPrimary ?? row.is_primary);
+
+  return {
+    id: row.idRekening || row.id_rekening || accountNumber || `${bankName}-${accountName}`,
+    bankName,
+    accountNumber,
+    accountName,
+    note,
+    isPrimary,
+  };
+}
+
+function buildManualPaymentAccounts(invoice) {
+  const singleInstruction = invoice?.paymentInstruction || invoice?.payment_instruction || {};
+  const rawInstructions =
+    invoice?.paymentInstructions ||
+    invoice?.payment_instructions ||
+    invoice?.paymentAccounts ||
+    invoice?.payment_accounts ||
+    null;
+
+  const source = Array.isArray(rawInstructions) && rawInstructions.length > 0
+    ? rawInstructions
+    : [singleInstruction];
+
+  const accounts = source
+    .map(normalizePaymentInstruction)
+    .filter((account) => account.bankName || account.accountNumber || account.accountName);
+
+  if (accounts.length > 0) return accounts;
+
+  return [
+    {
+      id: 'env-manual-payment-account',
+      bankName: import.meta.env.VITE_MANUAL_PAYMENT_BANK || 'Bank Nagari',
+      accountNumber: import.meta.env.VITE_MANUAL_PAYMENT_ACCOUNT_NUMBER || '0000000000',
+      accountName: import.meta.env.VITE_MANUAL_PAYMENT_ACCOUNT_NAME || 'UPTD Laboratorium Lingkungan DLH Sumbar',
+      note:
+        import.meta.env.VITE_MANUAL_PAYMENT_NOTE ||
+        'Pastikan nominal transfer sesuai total tagihan, lalu upload bukti pembayaran pada form di bawah.',
+      isPrimary: true,
+    },
+  ];
+}
+
+function formatManualAccountNumber(value) {
+  const raw = String(value || '').replace(/\s+/g, '');
+  if (!raw) return '-';
+  return raw.replace(/(.{4})/g, '$1 ').trim();
+}
 
 export function DetailPaymentSection({
   isAdminRejected,
@@ -35,7 +95,9 @@ export function DetailPaymentSection({
   paymentActionLoading,
   paymentProofError,
   paymentProofFile,
+  paymentProofInputRef,
   handlePaymentProofChange,
+  handleClearPaymentProof,
   handleConfirmPayment,
   isWaitingPaymentVerification,
   isPaymentRejected,
@@ -43,25 +105,10 @@ export function DetailPaymentSection({
   shouldShowGatewayPaymentPanel,
   handleChatAdmin,
 }) {
-  const paymentInstruction = invoice?.paymentInstruction || invoice?.payment_instruction || {};
-  const manualPaymentBank =
-    paymentInstruction.bankName ||
-    paymentInstruction.bank_name ||
-    import.meta.env.VITE_MANUAL_PAYMENT_BANK ||
-    'Bank Nagari';
-  const manualPaymentAccountNumber =
-    paymentInstruction.accountNumber ||
-    paymentInstruction.account_number ||
-    import.meta.env.VITE_MANUAL_PAYMENT_ACCOUNT_NUMBER ||
-    '0000000000';
-  const manualPaymentAccountName =
-    paymentInstruction.accountName ||
-    paymentInstruction.account_name ||
-    import.meta.env.VITE_MANUAL_PAYMENT_ACCOUNT_NAME ||
-    'UPTD Laboratorium Lingkungan DLH Sumbar';
+  const manualPaymentAccounts = buildManualPaymentAccounts(invoice);
+  const primaryPaymentAccount = manualPaymentAccounts.find((account) => account.isPrimary) || manualPaymentAccounts[0];
   const manualPaymentNote =
-    paymentInstruction.note ||
-    paymentInstruction.catatan ||
+    primaryPaymentAccount?.note ||
     import.meta.env.VITE_MANUAL_PAYMENT_NOTE ||
     'Pastikan nominal transfer sesuai total tagihan, lalu upload bukti pembayaran pada form di bawah.';
 
@@ -459,37 +506,31 @@ export function DetailPaymentSection({
 
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5">
                 <p className="text-sm font-semibold text-emerald-900">
-                  Nomor Rekening Pembayaran
+                  Pilihan Rekening Pembayaran
                 </p>
                 <p className="text-sm text-emerald-800 mt-1">
-                  Transfer pembayaran ke rekening berikut, lalu upload bukti pembayaran agar dapat diverifikasi admin.
+                  Transfer ke salah satu rekening aktif berikut, lalu upload bukti pembayaran agar dapat diverifikasi admin.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="rounded-lg border border-gray-200 bg-white p-5">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">
-                    Nomor Rekening
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1 break-all">
-                    {manualPaymentAccountNumber}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-3">
-                    Bank: {manualPaymentBank}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    A.n.: {manualPaymentAccountName}
-                  </p>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)]">
+                <div className="space-y-3">
+                  {manualPaymentAccounts.map((account, index) => (
+                    <PaymentAccountCard
+                      key={account.id || `${account.bankName}-${account.accountNumber}-${index}`}
+                      account={account}
+                    />
+                  ))}
                 </div>
 
-                <div className="rounded-lg border border-gray-200 bg-white p-5">
+                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                   <p className="text-xs uppercase tracking-wide text-gray-500">
                     Tagihan
                   </p>
-                  <p className="text-2xl font-bold text-emerald-700 mt-1">
+                  <p className="mt-1 text-2xl font-bold text-emerald-700">
                     {formatCurrency(invoice.totalTagihan || totalInvoice)}
                   </p>
-                  <p className="text-xs text-gray-500 mt-3">
+                  <p className="mt-3 text-xs text-gray-500">
                     Invoice: {invoice.nomorInvoice || '-'}
                   </p>
                   <p className="text-xs text-gray-500">
@@ -498,54 +539,26 @@ export function DetailPaymentSection({
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-medium text-blue-900">
-                  Catatan Transfer
-                </p>
-                <p className="text-xs text-blue-700 mt-1">
-                  {manualPaymentNote}
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-gray-200 bg-white p-5">
-                <h4 className="font-medium text-gray-900 mb-2">
-                  Upload Bukti Pembayaran
-                </h4>
-
-                <p className="text-xs text-gray-600 mb-3">
-                  Upload foto atau PDF bukti transfer. Format yang diterima: JPG, PNG, WEBP, atau PDF. Maksimal 5 MB.
-                </p>
-
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
-                  onChange={handlePaymentProofChange}
-                  className="block w-full text-sm text-gray-700 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-                />
-
-                {paymentProofFile && (
-                  <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
-                    <p className="text-sm font-medium text-emerald-800">
-                      File dipilih: {paymentProofFile.name}
-                    </p>
-                    <p className="text-xs text-emerald-700 mt-1">
-                      Ukuran: {(paymentProofFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                )}
-
-                {isPaymentRejected && (
-                  <p className="text-xs text-red-600 mt-3">
-                    Bukti lama tidak perlu dihapus manual. File baru akan menggantikan bukti pembayaran sebelumnya.
+              {manualPaymentNote && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-sm font-medium text-blue-900">
+                    Catatan Transfer
                   </p>
-                )}
-
-                {paymentProofError && (
-                  <p className="text-sm text-red-600 mt-2">
-                    {paymentProofError}
+                  <p className="mt-1 text-xs leading-relaxed text-blue-700">
+                    {manualPaymentNote}
                   </p>
-                )}
-              </div>
+                </div>
+              )}
+
+              <PaymentProofUploadCard
+                paymentProofFile={paymentProofFile}
+                paymentProofError={paymentProofError}
+                paymentProofInputRef={paymentProofInputRef}
+                isPaymentRejected={isPaymentRejected}
+                paymentActionLoading={paymentActionLoading}
+                handlePaymentProofChange={handlePaymentProofChange}
+                handleClearPaymentProof={handleClearPaymentProof}
+              />
 
               <button
                 onClick={handleConfirmPayment}
@@ -627,5 +640,146 @@ export function DetailPaymentSection({
     </div>
   )}
 </div>
+  );
+}
+
+
+function PaymentAccountCard({ account }) {
+  return (
+    <div className={`rounded-xl border bg-white p-5 shadow-sm ${account.isPrimary ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-gray-200'}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-gray-900">{account.bankName || '-'}</p>
+            {account.isPrimary && (
+              <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                Utama
+              </span>
+            )}
+          </div>
+          <p className="mt-2 break-all text-2xl font-bold tracking-wide text-gray-900">
+            {formatManualAccountNumber(account.accountNumber)}
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            A.n.: <span className="font-semibold text-gray-700">{account.accountName || '-'}</span>
+          </p>
+        </div>
+      </div>
+
+      {account.note && (
+        <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-600">
+          {account.note}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function getPaymentProofMeta(file) {
+  if (!file) return { icon: FileUp, label: '', size: '' };
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  const Icon = isPdf ? FileText : ImageIcon;
+
+  return {
+    icon: Icon,
+    label: isPdf ? 'PDF' : 'Gambar',
+    size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+  };
+}
+
+function PaymentProofUploadCard({
+  paymentProofFile,
+  paymentProofError,
+  paymentProofInputRef,
+  isPaymentRejected,
+  paymentActionLoading,
+  handlePaymentProofChange,
+  handleClearPaymentProof,
+}) {
+  const fileMeta = getPaymentProofMeta(paymentProofFile);
+  const SelectedIcon = fileMeta.icon;
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h4 className="font-semibold text-gray-900">Upload Bukti Pembayaran</h4>
+          <p className="mt-1 text-xs leading-relaxed text-gray-600">
+            Upload bukti transfer dalam format JPG, PNG, WEBP, atau PDF. Ukuran maksimal 5 MB.
+          </p>
+        </div>
+        <span className="inline-flex w-fit items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+          Maks. 5 MB
+        </span>
+      </div>
+
+      <input
+        ref={paymentProofInputRef}
+        type="file"
+        accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+        onChange={handlePaymentProofChange}
+        disabled={paymentActionLoading}
+        className="sr-only"
+        id="payment-proof-upload"
+      />
+
+      <label
+        htmlFor="payment-proof-upload"
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-5 py-8 text-center transition ${
+          paymentProofError
+            ? 'border-red-300 bg-red-50 hover:bg-red-50'
+            : paymentProofFile
+              ? 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100/60'
+              : 'border-gray-300 bg-gray-50 hover:border-emerald-300 hover:bg-emerald-50/70'
+        } ${paymentActionLoading ? 'pointer-events-none opacity-70' : ''}`}
+      >
+        <div className={`mb-3 flex h-12 w-12 items-center justify-center rounded-full ${paymentProofFile ? 'bg-white text-emerald-700' : 'bg-white text-gray-500'}`}>
+          {paymentProofFile ? <SelectedIcon className="h-6 w-6" /> : <UploadCloud className="h-6 w-6" />}
+        </div>
+        <p className="text-sm font-semibold text-gray-900">
+          {paymentProofFile ? 'File bukti sudah dipilih' : 'Klik untuk pilih file bukti pembayaran'}
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+          {paymentProofFile ? 'File akan dikirim saat tombol Kirim Bukti Pembayaran ditekan.' : 'PDF atau gambar. Tidak perlu drag, cukup klik area ini.'}
+        </p>
+      </label>
+
+      {paymentProofFile && (
+        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-700">
+              <SelectedIcon className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-emerald-900">{paymentProofFile.name}</p>
+              <p className="mt-1 text-xs text-emerald-700">
+                {fileMeta.label} • {fileMeta.size}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearPaymentProof}
+            disabled={paymentActionLoading}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+          >
+            <X className="h-4 w-4" />
+            Ganti File
+          </button>
+        </div>
+      )}
+
+      {isPaymentRejected && (
+        <p className="mt-3 text-xs text-red-600">
+          Bukti lama tidak perlu dihapus manual. File baru akan menggantikan bukti pembayaran sebelumnya.
+        </p>
+      )}
+
+      {paymentProofError && (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+          {paymentProofError}
+        </p>
+      )}
+    </div>
   );
 }

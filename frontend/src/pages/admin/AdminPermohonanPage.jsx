@@ -88,6 +88,9 @@ export function AdminPermohonanPage({ initialRegistrationId = '', onDetailRouteC
     pickupModalMode,
     pickupForm,
     setPickupForm,
+    pickupModalAlert,
+    setPickupModalAlert,
+    clearPickupModalAlert,
     showCompletePickupConfirm,
     fetchPickupQueue,
     openSchedulePickupModal,
@@ -142,6 +145,24 @@ export function AdminPermohonanPage({ initialRegistrationId = '', onDetailRouteC
     fetchData();
     fetchPickupQueue();
   }, [fetchData, fetchPickupQueue]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search || '');
+    const tab = params.get('tab');
+    const status = params.get('status');
+
+    if (['Aktif', 'Pengambilan', 'Riwayat'].includes(tab)) {
+      setActiveTab(tab);
+    }
+
+    if (status) {
+      const targetTab = ['Aktif', 'Pengambilan', 'Riwayat'].includes(tab) ? tab : 'Aktif';
+      const allowedStatus = getAdminTabFilterOptions(targetTab);
+      if (allowedStatus.includes(status)) {
+        setActiveStatusFilter(status);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const id = String(initialRegistrationId || '').trim();
@@ -405,6 +426,9 @@ const getPickupScheduleLabel = (row) => getPickupScheduleLabelValue(row, formatD
         pickupForm={pickupForm}
         setPickupForm={setPickupForm}
         saving={saving}
+        modalAlert={pickupModalAlert}
+        onModalAlert={setPickupModalAlert}
+        onClearModalAlert={clearPickupModalAlert}
         onClose={closePickupModal}
         onSaveSchedule={handleSavePickupSchedule}
         onRequestCompletePickup={requestCompletePickupConfirmation}

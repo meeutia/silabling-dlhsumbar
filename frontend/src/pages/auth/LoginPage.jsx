@@ -1,15 +1,7 @@
 import { useState } from 'react';
-import {
-  FlaskConical,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  UserCircle,
-  X,
-  Loader2,
-} from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, X, Loader2 } from 'lucide-react';
 import { authApi } from '../../api/authApi';
+import { AuthLogoPanel } from '../../components/auth/AuthLogoPanel';
 
 export function LoginPage({ onLogin, onSwitchToRegister }) {
   const [formData, setFormData] = useState({
@@ -131,69 +123,7 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 flex items-center justify-center p-6">
       <div className="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
         {/* Left Side */}
-        <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 p-12 flex flex-col justify-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 left-10">
-              <FlaskConical className="w-32 h-32 text-white" />
-            </div>
-            <div className="absolute bottom-20 right-10">
-              <UserCircle className="w-24 h-24 text-white" />
-            </div>
-            <div className="absolute top-1/2 right-1/4">
-              <Mail className="w-20 h-20 text-white" />
-            </div>
-          </div>
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                <FlaskConical className="w-10 h-10 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-white">
-                  Lab Lingkungan
-                </h1>
-                <p className="text-emerald-100 text-sm">Sistem Informasi</p>
-              </div>
-            </div>
-
-            <h2 className="text-3xl font-semibold text-white mb-4 leading-tight">
-              Sistem Informasi Laboratorium Lingkungan
-            </h2>
-
-            <p className="text-emerald-100 text-lg mb-8">
-              Platform terintegrasi untuk pendaftaran dan pemantauan pengujian
-              kualitas air dan limbah cair secara transparan dan terpercaya.
-            </p>
-
-            <div className="space-y-3">
-              {[
-                'Pendaftaran pengujian online 24/7',
-                'Tracking real-time status sampel',
-                'Download LHU resmi terverifikasi',
-              ].map((feature, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-4 h-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </div>
-                  <span className="text-white/90">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <AuthLogoPanel />
 
         {/* Right Side */}
         <div className="p-12 flex flex-col justify-center">
@@ -207,8 +137,19 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
-                <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm border border-red-200">
-                  {error}
+                <div
+                  className={
+                    error.includes('belum memiliki akun')
+                      ? 'rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800'
+                      : 'rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600'
+                  }
+                >
+                  {error.includes('belum memiliki akun') && (
+                    <p className="mb-1 font-semibold text-amber-900">
+                      Akun login belum tersedia
+                    </p>
+                  )}
+                  <p>{error}</p>
                 </div>
               )}
 
@@ -230,7 +171,7 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
                     onChange={handleChange}
                     required
                     className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
-                    placeholder="email, username"
+                    placeholder="email atau username"
                   />
                 </div>
               </div>
@@ -300,27 +241,6 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
                   Daftar
                 </button>
               </p>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <div className="flex items-start gap-2">
-                <svg
-                  className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                <p className="text-xs text-gray-600">
-                  Data Anda dijaga sesuai standar keamanan pemerintah.
-                </p>
-              </div>
             </div>
           </div>
         </div>

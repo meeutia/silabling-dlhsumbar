@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminParameterApi } from '../../../api/adminParameterApi';
-import { normalizeBool, stripHtml } from './parameterFormatters';
+import { getToastDuration, getToastTitle, normalizeToastType } from '../../../utils/toastConfig';
+import { getCurrencyDigits, normalizeBool, stripHtml, toCurrencyNumber } from './parameterFormatters';
 
 const EMPTY_PAKET_PARAM_FORM = {
   id_parameter: '',
@@ -40,7 +41,7 @@ function getInitialFormData(type, item) {
           id_parameter: item.id_parameter || item.parameter?.id_parameter || '',
           id_metode: item.id_metode || item.metode?.id_metode || '',
           acuan_metode: item.acuan_metode || '',
-          tarif: item.tarif || 0,
+          tarif: item.tarif != null ? String(item.tarif) : '',
           is_terakreditasi: normalizeBool(item.is_terakreditasi),
           is_subkontrak: normalizeBool(item.is_subkontrak),
           is_new_parameter: false,
@@ -53,7 +54,7 @@ function getInitialFormData(type, item) {
           id_parameter: '',
           id_metode: '',
           acuan_metode: '',
-          tarif: 0,
+          tarif: '',
           is_terakreditasi: false,
           is_subkontrak: false,
           is_new_parameter: false,
@@ -97,10 +98,10 @@ function getInitialFormData(type, item) {
 
   if (type === 'add_tarif' || type === 'edit_tarif') {
     return item
-      ? { ...item }
+      ? { ...item, tarif: item.tarif != null ? String(item.tarif) : '' }
       : {
           keterangan_jarak: '',
-          tarif: 0,
+          tarif: '',
         };
   }
 
@@ -123,6 +124,124 @@ function validateParameterMetode(body) {
   if (!body.is_new_metode && !body.id_metode) {
     throw new Error('Pilih metode');
   }
+
+  if (toCurrencyNumber(body.tarif) <= 0) {
+    throw new Error('Tarif harus diisi lebih dari 0.');
+  }
+}
+
+function normalizeDuplicateText(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+function normalizeDuplicateAcuan(value) {
+  return normalizeDuplicateText(value || '');
+}
+
+function normalizeDuplicateFlag(value) {
+  return value === true || value === 1 || value === '1' || String(value).toLowerCase() === 'true' ? 1 : 0;
+}
+
+function getParameterName(parameter) {
+  return stripHtml(parameter?.nama_parameter || parameter?.parameter?.nama_parameter || '');
+}
+
+function getMethodName(method) {
+  return method?.nama_metode || method?.metode?.nama_metode || '';
+}
+
+function createDuplicateWarning(message) {
+  const error = new Error(message);
+  error.isDuplicateWarning = true;
+  return error;
+}
+
+function buildDuplicateParameterMetodeWarning({
+  body,
+  selectedItem,
+  parameterMetodeData,
+  parametersOption,
+  methodsOption,
+}) {
+  const namaParameterBaru = String(body.nama_parameter || '').trim();
+  const namaMetodeBaru = String(body.nama_metode || '').trim();
+
+  if (body.is_new_parameter && namaParameterBaru) {
+    const existingParameter = parametersOption.find(
+      (parameter) => normalizeDuplicateText(getParameterName(parameter)) === normalizeDuplicateText(namaParameterBaru)
+    );
+
+    if (existingParameter) {
+      return `Parameter "${namaParameterBaru}" sudah ada. Matikan pilihan Buat Baru, lalu pilih parameter dari daftar.`;
+    }
+  }
+
+  if (body.is_new_metode && namaMetodeBaru) {
+    const existingMetode = methodsOption.find(
+      (metode) => normalizeDuplicateText(getMethodName(metode)) === normalizeDuplicateText(namaMetodeBaru)
+    );
+
+    if (existingMetode) {
+      return `Metode "${namaMetodeBaru}" sudah ada. Matikan pilihan Buat Baru, lalu pilih metode dari daftar.`;
+    }
+  }
+
+  if (body.is_new_parameter || body.is_new_metode) {
+    return '';
+  }
+
+  const idParameter = String(body.id_parameter || '');
+  const idMetode = String(body.id_metode || '');
+  const acuanMetode = normalizeDuplicateAcuan(body.acuan_metode);
+  const isSubkontrak = normalizeDuplicateFlag(body.is_subkontrak);
+
+  const duplicate = parameterMetodeData.find((item) => {
+    if (selectedItem?.id_metode_parameter && item.id_metode_parameter === selectedItem.id_metode_parameter) {
+      return false;
+    }
+
+    return (
+      String(item.id_parameter || item.parameter?.id_parameter || '') === idParameter &&
+      String(item.id_metode || item.metode?.id_metode || '') === idMetode &&
+      normalizeDuplicateAcuan(item.acuan_metode) === acuanMetode &&
+      normalizeDuplicateFlag(item.is_subkontrak) === isSubkontrak
+    );
+  });
+
+  if (!duplicate) {
+    return '';
+  }
+
+  const parameterName = getParameterName(duplicate) || parametersOption.find((item) => item.id_parameter === idParameter)?.nama_parameter || 'Parameter';
+  const metodeName = getMethodName(duplicate) || methodsOption.find((item) => item.id_metode === idMetode)?.nama_metode || 'Metode';
+  const acuanLabel = String(body.acuan_metode || '').trim();
+  const labelParts = [stripHtml(parameterName), metodeName];
+
+  if (acuanLabel) {
+    labelParts.push(acuanLabel);
+  }
+
+  return `Data parameter metode sudah ada: ${labelParts.join(' - ')}${isSubkontrak ? ' (subkontrak)' : ''}.`;
+}
+
+function isDuplicateError(error) {
+  return Boolean(
+    error?.isDuplicateWarning ||
+    error?.status === 409 ||
+    error?.data?.code === 'DUPLICATE_MASTER_DATA' ||
+    /sudah ada|duplikat/i.test(error?.message || '')
+  );
+}
+
+function normalizeTarifBody(body) {
+  if (!Object.prototype.hasOwnProperty.call(body, 'tarif')) return body;
+  return {
+    ...body,
+    tarif: toCurrencyNumber(body.tarif),
+  };
 }
 
 async function saveByModalType(modalType, body, selectedItem) {
@@ -168,6 +287,15 @@ export function useAdminKelolaParameter() {
     show: false,
     message: '',
     type: 'success',
+    title: 'Berhasil',
+  });
+
+  const [modalAlert, setModalAlert] = useState({
+    show: false,
+    message: '',
+    type: 'info',
+    title: 'Perhatian',
+    id: 0,
   });
 
   const [parameterMetodeData, setParameterMetodeData] = useState([]);
@@ -190,12 +318,45 @@ export function useAdminKelolaParameter() {
   const [paketParamForm, setPaketParamForm] = useState(EMPTY_PAKET_PARAM_FORM);
   const [editingPaketParam, setEditingPaketParam] = useState(null);
 
-  const showToast = useCallback((message, type = 'success') => {
-    setToast({ show: true, message, type });
+  const hideToast = useCallback(() => {
+    setToast({ show: false, message: '', type: 'success', title: 'Berhasil' });
+  }, []);
+
+  const hideModalAlert = useCallback(() => {
+    setModalAlert({ show: false, message: '', type: 'info', title: 'Perhatian', id: 0 });
+  }, []);
+
+  const showModalAlert = useCallback((message, type = 'warning', options = {}) => {
+    const normalizedType = normalizeToastType(type);
+    setModalAlert({
+      show: true,
+      message,
+      type: normalizedType,
+      title: getToastTitle(normalizedType, options.title),
+      id: Date.now(),
+    });
+  }, []);
+
+  const showToast = useCallback((message, type = 'success', options = {}) => {
+    const normalizedType = normalizeToastType(type);
+    const title = getToastTitle(normalizedType, options.title);
+    const duration = getToastDuration(normalizedType, options.duration);
+
+    setToast({
+      show: true,
+      message,
+      type: normalizedType,
+      title,
+      duration,
+      position: options.position,
+    });
 
     setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 3000);
+      setToast((current) => {
+        if (current.message !== message || current.type !== normalizedType) return current;
+        return { show: false, message: '', type: 'success', title: 'Berhasil' };
+      });
+    }, duration);
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -266,20 +427,23 @@ export function useAdminKelolaParameter() {
     setModalType(type);
     setSelectedItem(item);
     setFormData(getInitialFormData(type, item));
+    hideModalAlert();
     setIsModalOpen(true);
-  }, []);
+  }, [hideModalAlert]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setModalType(null);
     setSelectedItem(null);
     setFormData({});
+    hideModalAlert();
     setPaketParamForm(EMPTY_PAKET_PARAM_FORM);
     setEditingPaketParam(null);
     setPaketParameters([]);
-  }, []);
+  }, [hideModalAlert]);
 
   const handleFormChange = useCallback((event) => {
+    hideModalAlert();
     const { name, value, type, checked } = event.target;
 
     if (name === 'is_new_parameter') {
@@ -303,11 +467,19 @@ export function useAdminKelolaParameter() {
       return;
     }
 
+    if (name === 'tarif') {
+      setFormData((prev) => ({
+        ...prev,
+        tarif: getCurrencyDigits(value),
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
-  }, []);
+  }, [hideModalAlert]);
 
   const handlePaketParamFormChange = useCallback((event) => {
     const { name, value } = event.target;
@@ -321,9 +493,28 @@ export function useAdminKelolaParameter() {
   const handleSubmit = useCallback(
     async (event) => {
       event.preventDefault();
+      hideModalAlert();
 
       try {
-        const body = { ...formData };
+        const body = normalizeTarifBody({ ...formData });
+
+        if (modalType === 'add_param_metode' || modalType === 'edit_param_metode') {
+          const duplicateWarning = buildDuplicateParameterMetodeWarning({
+            body,
+            selectedItem,
+            parameterMetodeData,
+            parametersOption,
+            methodsOption,
+          });
+
+          if (duplicateWarning) {
+            throw createDuplicateWarning(duplicateWarning);
+          }
+        }
+
+        if ((modalType === 'add_tarif' || modalType === 'edit_tarif') && toCurrencyNumber(body.tarif) <= 0) {
+          throw new Error('Tarif harus diisi lebih dari 0.');
+        }
 
         await saveByModalType(modalType, body, selectedItem);
 
@@ -331,10 +522,33 @@ export function useAdminKelolaParameter() {
         handleCloseModal();
         fetchData();
       } catch (error) {
-        showToast(error.message || 'Terjadi kesalahan', 'error');
+        const message = error.message || 'Terjadi kesalahan';
+        const type = isDuplicateError(error) ? 'warning' : 'error';
+
+        const isParameterMetodeModal = modalType === 'add_param_metode' || modalType === 'edit_param_metode';
+        const title = isDuplicateError(error) ? 'Data sudah ada' : undefined;
+
+        if (isParameterMetodeModal) {
+          showModalAlert(message, type, { title });
+          return;
+        }
+
+        showToast(message, type, { title });
       }
     },
-    [fetchData, formData, handleCloseModal, modalType, selectedItem, showToast]
+    [
+      fetchData,
+      formData,
+      handleCloseModal,
+      hideModalAlert,
+      methodsOption,
+      modalType,
+      parameterMetodeData,
+      parametersOption,
+      selectedItem,
+      showModalAlert,
+      showToast,
+    ]
   );
 
   const openDeleteConfirm = useCallback((type, item) => {
@@ -406,6 +620,7 @@ export function useAdminKelolaParameter() {
   const handleAddPaketParameter = useCallback(
     async (event) => {
       event.preventDefault();
+      hideModalAlert();
 
       try {
         if (!paketParamForm.id_parameter) {
@@ -430,7 +645,7 @@ export function useAdminKelolaParameter() {
         showToast(error.message || 'Gagal menambahkan parameter', 'error');
       }
     },
-    [fetchPaketParameters, paketParamForm, selectedItem, showToast]
+    [fetchPaketParameters, hideModalAlert, paketParamForm, selectedItem, showToast]
   );
 
   const handleStartEditPaketParameter = useCallback((item) => {
@@ -445,6 +660,7 @@ export function useAdminKelolaParameter() {
   const handleUpdatePaketParameter = useCallback(
     async (event) => {
       event.preventDefault();
+      hideModalAlert();
 
       try {
         if (!editingPaketParam?.nilai_bm?.trim()) {
@@ -464,7 +680,7 @@ export function useAdminKelolaParameter() {
         showToast(error.message || 'Gagal mengubah nilai baku mutu', 'error');
       }
     },
-    [editingPaketParam, fetchPaketParameters, selectedItem, showToast]
+    [editingPaketParam, fetchPaketParameters, hideModalAlert, selectedItem, showToast]
   );
 
   const handleEditPaketParamChange = useCallback((event) => {
@@ -475,6 +691,7 @@ export function useAdminKelolaParameter() {
       [name]: value,
     }));
   }, []);
+
 
   const currentFilterOptions = useMemo(() => {
     if (activeTab === 'parameter_metode') {
@@ -583,6 +800,9 @@ export function useAdminKelolaParameter() {
     addButtonLabel,
     rowsByTab,
     toast,
+    hideToast,
+    modalAlert,
+    hideModalAlert,
     isModalOpen,
     modalType,
     selectedItem,

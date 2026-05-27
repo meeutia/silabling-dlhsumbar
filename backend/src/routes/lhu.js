@@ -5,6 +5,8 @@ const { verifyToken, authorizeRoles } = require('../middlewares/auth');
 
 const router = express.Router();
 const Roles = require('../constants/roles');
+
+const ADMIN_LIKE_ROLES = [Roles.ADMIN, Roles.PSP];
 const {
   validateFinalizeLhu,
   validateKalabApproval,
@@ -30,8 +32,8 @@ router.get('/finalization/history', authorizeRoles(Roles.QC, Roles.KALAB, Roles.
 router.get('/kalab/queue', authorizeRoles(Roles.KALAB), lhuController.getKalabApprovalQueue);
 router.post('/kalab/approve', authorizeRoles(Roles.KALAB), validateKalabApproval, validateKalabApprovalBusinessTimeline, lhuController.approveByKalab);
 
-router.get('/pickup/queue', authorizeRoles(Roles.ADMIN), lhuPickupController.getPickupQueue);
-router.post('/pickup/schedule', authorizeRoles(Roles.ADMIN), validateLhuPickupSchedule, lhuPickupController.schedulePickup);
-router.post('/pickup/complete', authorizeRoles(Roles.ADMIN), validateLhuPickupCompletion, lhuPickupController.completePickup);
+router.get('/pickup/queue', authorizeRoles(...ADMIN_LIKE_ROLES), lhuPickupController.getPickupQueue);
+router.post('/pickup/schedule', authorizeRoles(...ADMIN_LIKE_ROLES), validateLhuPickupSchedule, lhuPickupController.schedulePickup);
+router.post('/pickup/complete', authorizeRoles(...ADMIN_LIKE_ROLES), validateLhuPickupCompletion, lhuPickupController.completePickup);
 
 module.exports = router;

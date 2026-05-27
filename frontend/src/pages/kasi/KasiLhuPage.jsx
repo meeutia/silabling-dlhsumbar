@@ -17,7 +17,7 @@ export function KasiLhuPage() {
       <div className="p-4 md:p-8">
         <KasiLhuHeader />
 
-        <KasiLhuStats summary={page.summary} />
+        <KasiLhuStats summary={page.summary} onSelectTab={page.setActiveTab} onSearchChange={page.setSearchQuery} />
 
         <KasiLhuSearchTabs
           activeTab={page.activeTab}

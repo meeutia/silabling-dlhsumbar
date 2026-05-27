@@ -58,8 +58,10 @@ export function useDetailPermohonanPage(request) {
   const [paymentProofError, setPaymentProofError] = useState('');
   const [paymentActionLoading, setPaymentActionLoading] = useState(false);
   const [customerCancelModalOpen, setCustomerCancelModalOpen] = useState(false);
+  const [customerCancelAlert, setCustomerCancelAlert] = useState('');
   const [detailRefreshing, setDetailRefreshing] = useState(false);
   const [scheduleChangeForm, setScheduleChangeForm] = useState({ jenisJadwal: 'SAMPEL', tanggalUsulan: '', jamUsulan: '', alasanPengajuan: '' });
+  const [scheduleChangeAlert, setScheduleChangeAlert] = useState('');
   const [activeScheduleChangeType, setActiveScheduleChangeType] = useState('');
   const [scheduleChangeLoading, setScheduleChangeLoading] = useState(false);
   const [scheduleConfirmLoading, setScheduleConfirmLoading] = useState('');
@@ -69,6 +71,7 @@ export function useDetailPermohonanPage(request) {
   const initialDetailFetchRef = useRef('');
 
   const pembayaranRef = useRef(null);
+  const paymentProofInputRef = useRef(null);
   const hasilRef = useRef(null);
   const timelineRef = useRef(null);
   const sampelRef = useRef(null);
@@ -299,12 +302,14 @@ export function useDetailPermohonanPage(request) {
       FPPL_STATUSES.MENUNGGU_VERIFIKASI_PEMBAYARAN,
       FPPL_STATUSES.MENUNGGU_SAMPEL,
       FPPL_STATUSES.PROSES_PENGUJIAN,
+      FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU,
       FPPL_STATUSES.SELESAI,
     ].includes(statusAktif);
 
   const isPaymentDoneOrContinued = [
     FPPL_STATUSES.MENUNGGU_SAMPEL,
     FPPL_STATUSES.PROSES_PENGUJIAN,
+    FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU,
     FPPL_STATUSES.SELESAI,
   ].includes(statusAktif);
 
@@ -325,6 +330,7 @@ export function useDetailPermohonanPage(request) {
         setExpandedSection('sampel');
         break;
       case FPPL_STATUSES.PROSES_PENGUJIAN:
+      case FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU:
       case FPPL_STATUSES.SELESAI:
         setExpandedSection('timeline');
         break;
@@ -464,6 +470,14 @@ export function useDetailPermohonanPage(request) {
     setPaymentProofFile(file);
   };
 
+  const handleClearPaymentProof = () => {
+    setPaymentProofFile(null);
+    setPaymentProofError('');
+    if (paymentProofInputRef.current) {
+      paymentProofInputRef.current.value = '';
+    }
+  };
+
   const handleConfirmPayment = async () => {
     if (!paymentProofFile) {
       setPaymentProofError('Upload bukti pembayaran terlebih dahulu sebelum klik Kirim Bukti Pembayaran.');
@@ -480,6 +494,9 @@ export function useDetailPermohonanPage(request) {
 
       setPaymentProofFile(null);
       setPaymentProofError('');
+      if (paymentProofInputRef.current) {
+        paymentProofInputRef.current.value = '';
+      }
 
       await refreshRequestDetail();
       setExpandedSection('pembayaran');
@@ -494,11 +511,13 @@ export function useDetailPermohonanPage(request) {
   };
 
   const handleTidakSetujuInvoice = () => {
+    setCustomerCancelAlert('');
     setCustomerCancelModalOpen(true);
   };
 
   const handleCloseCustomerCancelModal = () => {
     if (paymentActionLoading) return;
+    setCustomerCancelAlert('');
     setCustomerCancelModalOpen(false);
   };
 
@@ -510,12 +529,13 @@ export function useDetailPermohonanPage(request) {
         action: 'reject',
       });
 
+      setCustomerCancelAlert('');
       setCustomerCancelModalOpen(false);
       await refreshRequestDetail();
       setExpandedSection('pembayaran');
       showSuccess('Permohonan berhasil dibatalkan.');
     } catch (error) {
-      showError(error?.message || 'Gagal menghubungi server.');
+      setCustomerCancelAlert(error?.message || 'Gagal menghubungi server.');
     } finally {
       setPaymentActionLoading(false);
     }
@@ -563,11 +583,13 @@ export function useDetailPermohonanPage(request) {
 
   const handleOpenScheduleChangeForm = (jenisJadwal) => {
     const normalizedType = jenisJadwal === 'LHU' ? 'LHU' : 'SAMPEL';
+    setScheduleChangeAlert('');
     setActiveScheduleChangeType(normalizedType);
     resetScheduleChangeFields(normalizedType);
   };
 
   const handleCancelScheduleChangeForm = () => {
+    setScheduleChangeAlert('');
     setActiveScheduleChangeType('');
     resetScheduleChangeFields(scheduleChangeForm.jenisJadwal || 'SAMPEL');
   };
@@ -616,22 +638,24 @@ export function useDetailPermohonanPage(request) {
   const handleScheduleChangeDateChange = (jenisJadwal, value) => {
     const businessDateError = validateScheduleBusinessDate(value);
     if (businessDateError) {
-      showError(businessDateError);
+      setScheduleChangeAlert(businessDateError);
       setScheduleChangeForm((previous) => ({ ...previous, jenisJadwal, tanggalUsulan: '' }));
       return;
     }
 
+    setScheduleChangeAlert('');
     setScheduleChangeForm((previous) => ({ ...previous, jenisJadwal, tanggalUsulan: value }));
   };
 
   const handleScheduleChangeTimeChange = (jenisJadwal, value) => {
     const businessTimeError = validateScheduleBusinessTime(value);
     if (businessTimeError) {
-      showError(businessTimeError);
+      setScheduleChangeAlert(businessTimeError);
       setScheduleChangeForm((previous) => ({ ...previous, jenisJadwal, jamUsulan: '' }));
       return;
     }
 
+    setScheduleChangeAlert('');
     setScheduleChangeForm((previous) => ({ ...previous, jenisJadwal, jamUsulan: value }));
   };
 
@@ -639,22 +663,23 @@ export function useDetailPermohonanPage(request) {
     event?.preventDefault?.();
 
     if (!scheduleChangeForm.tanggalUsulan || !scheduleChangeForm.jamUsulan || !scheduleChangeForm.alasanPengajuan.trim()) {
-      showError('Tanggal, jam, dan alasan perubahan jadwal wajib diisi.');
+      setScheduleChangeAlert('Tanggal, jam, dan alasan perubahan jadwal wajib diisi.');
       return;
     }
 
     const businessDateError = validateScheduleBusinessDate(scheduleChangeForm.tanggalUsulan);
     if (businessDateError) {
-      showError(businessDateError);
+      setScheduleChangeAlert(businessDateError);
       return;
     }
 
     const businessTimeError = validateScheduleBusinessTime(scheduleChangeForm.jamUsulan);
     if (businessTimeError) {
-      showError(businessTimeError);
+      setScheduleChangeAlert(businessTimeError);
       return;
     }
 
+    setScheduleChangeAlert('');
     setScheduleChangeLoading(true);
 
     try {
@@ -674,12 +699,13 @@ export function useDetailPermohonanPage(request) {
         jamUsulan: '',
         alasanPengajuan: '',
       }));
+      setScheduleChangeAlert('');
       setActiveScheduleChangeType('');
       await refreshRequestDetail();
       setExpandedSection('sampel');
       showSuccess('Pengajuan perubahan jadwal berhasil dikirim ke admin.');
     } catch (error) {
-      showError(error?.message || 'Gagal mengirim pengajuan perubahan jadwal.');
+      setScheduleChangeAlert(error?.message || 'Gagal mengirim pengajuan perubahan jadwal.');
     } finally {
       setScheduleChangeLoading(false);
     }
@@ -775,6 +801,7 @@ export function useDetailPermohonanPage(request) {
     canShowInvoice,
     cleanDecisionNote,
     customerProfile,
+    customerCancelAlert,
     customerCancelModalOpen,
     detailRefreshing,
     expandedSection,
@@ -798,6 +825,7 @@ export function useDetailPermohonanPage(request) {
     handleConfirmCustomerCancel,
     handleLihatInvoice,
     handlePaymentProofChange,
+    handleClearPaymentProof,
     handleSetujuInvoice,
     handleScheduleChangeSubmit,
     handleTidakSetujuInvoice,
@@ -821,10 +849,12 @@ export function useDetailPermohonanPage(request) {
     isGatewayExpired,
     isPaymentRejected,
     pembayaranRef,
+    paymentProofInputRef,
     progressSteps,
     requestData,
     requestSamples,
     sampelRef,
+    scheduleChangeAlert,
     scheduleChangeForm,
     scheduleChangeLoading,
     scheduleConfirmLoading,

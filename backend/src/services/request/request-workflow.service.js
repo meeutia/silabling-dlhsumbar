@@ -4,6 +4,7 @@ const { generateId, generateNomorFppl } = require('../../utils/id-generator');
 const ReferenceService = require('../reference.service');
 const { Op } = require('sequelize');
 const WorkflowLogService = require('../workflow/workflow-log.service');
+const FpplDocumentService = require('../fppl/fppl-document.service');
 const {
   assertBusinessDateOrThrow: assertScheduleBusinessDateOrThrow,
   normalizeDateOnly: normalizeScheduleDateOnly,
@@ -225,7 +226,7 @@ const rejectRequest = async (requestId, alasan, kasiNik = null) => {
   };
 };
 
-const saveSamplingSchedule = async (requestId, scheduleDate, scheduleTime) => {
+const saveSamplingSchedule = async (requestId, scheduleDate, scheduleTime, actorNik = null) => {
   const t = await sequelize.transaction();
 
   try {
@@ -254,10 +255,10 @@ const saveSamplingSchedule = async (requestId, scheduleDate, scheduleTime) => {
 
     if (!existingSchedule) {
       const newScheduleId = await generateId(JadwalSampel, 'id_jadwal', 'JDW-');
-      savedSchedule = await JadwalSampel.create({ id_jadwal: newScheduleId, id_registrasi: requestId, tanggal_jadwal: normalizedDate, jam_jadwal: normalizedTime, status_jadwal: 'Terjadwal' }, { transaction: t });
+      savedSchedule = await JadwalSampel.create({ id_jadwal: newScheduleId, id_registrasi: requestId, tanggal_jadwal: normalizedDate, jam_jadwal: normalizedTime, status_jadwal: 'Terjadwal', ...(actorNik ? { dibuat_oleh: actorNik } : {}) }, { transaction: t });
       actionType = 'created';
     } else {
-      await existingSchedule.update({ tanggal_jadwal: normalizedDate, jam_jadwal: normalizedTime, status_jadwal: 'Terjadwal' }, { transaction: t });
+      await existingSchedule.update({ tanggal_jadwal: normalizedDate, jam_jadwal: normalizedTime, status_jadwal: 'Terjadwal', ...(actorNik ? { dibuat_oleh: actorNik } : {}) }, { transaction: t });
       savedSchedule = existingSchedule;
     }
 
@@ -280,21 +281,28 @@ const saveSamplingSchedule = async (requestId, scheduleDate, scheduleTime) => {
       statusAfter: savedSchedule.status_jadwal,
       source: 'Admin',
       note: actionType === 'created' ? 'Jadwal sampel dibuat.' : 'Jadwal sampel diperbarui.',
-      actorNik: null,
+      actorNik: actorNik || null,
       transaction: t,
     });
 
     await t.commit();
 
+    const fpplDocument = await FpplDocumentService.tryGenerateFpplPdfIfReady(requestId, {
+      actorNik,
+    });
+
     return {
       id_registrasi: requestRecord.id_registrasi,
       status: requestRecord.status_fppl,
       actionType,
+      file_fppl: fpplDocument?.file_fppl || null,
+      fileFppl: fpplDocument?.file_fppl || null,
       jadwal: {
         id_jadwal: savedSchedule.id_jadwal,
         tanggal_jadwal: savedSchedule.tanggal_jadwal,
         jam_jadwal: savedSchedule.jam_jadwal,
         status_jadwal: savedSchedule.status_jadwal,
+        dibuat_oleh: savedSchedule.dibuat_oleh || null,
         jenis_pengambilan_sampel: requestRecord.jenis_pengambilan_sampel,
         tanggal_iso: `${savedSchedule.tanggal_jadwal}T${String(savedSchedule.jam_jadwal).slice(0, 8)}`
       }
@@ -385,7 +393,7 @@ const generateNextJadwalId = async () => {
   return `JDW-${String(num + 1).padStart(3, '0')}`;
 };
 
-const createOrUpdateSamplingSchedule = async ({ idRegistrasi, tanggalPengambilan, jamPengambilan, idPegawaiPcc }) => {
+const createOrUpdateSamplingSchedule = async ({ idRegistrasi, tanggalPengambilan, jamPengambilan, idPegawaiPcc, actorNik = null }) => {
   const t = await sequelize.transaction();
 
   try {
@@ -415,10 +423,10 @@ const createOrUpdateSamplingSchedule = async ({ idRegistrasi, tanggalPengambilan
     let pccPayload = { id_pegawai_pcc: null };
 
     if (isOfficerSampling) {
-      if (!idPegawaiPcc) throw new Error('PCC wajib dipilih.');
+      if (!idPegawaiPcc) throw new Error('PPS wajib dipilih.');
 
       const pegawaiPcc = await Pegawai.findOne({ where: { id_pegawai: idPegawaiPcc, is_pcc: 1 }, transaction: t });
-      if (!pegawaiPcc) throw new Error('PCC tidak valid.');
+      if (!pegawaiPcc) throw new Error('PPS tidak valid.');
 
       pccPayload = { id_pegawai_pcc: idPegawaiPcc };
     }
@@ -434,6 +442,7 @@ const createOrUpdateSamplingSchedule = async ({ idRegistrasi, tanggalPengambilan
       tanggal_jadwal: normalizedScheduleDate,
       jam_jadwal: normalizedScheduleTime,
       status_jadwal: 'Terjadwal',
+      ...(actorNik ? { dibuat_oleh: actorNik } : {}),
       ...pccPayload
     };
 
@@ -448,15 +457,22 @@ const createOrUpdateSamplingSchedule = async ({ idRegistrasi, tanggalPengambilan
     }
     await t.commit();
 
+    const fpplDocument = await FpplDocumentService.tryGenerateFpplPdfIfReady(idRegistrasi, {
+      actorNik,
+    });
+
     return {
       actionType,
       id_registrasi: idRegistrasi,
       jenis_pengambilan_sampel: request.jenis_pengambilan_sampel,
+      file_fppl: fpplDocument?.file_fppl || null,
+      fileFppl: fpplDocument?.file_fppl || null,
       jadwal: {
         id_jadwal: jadwal.id_jadwal,
         tanggal_jadwal: jadwal.tanggal_jadwal,
         jam_jadwal: jadwal.jam_jadwal,
         id_pegawai_pcc: jadwal.id_pegawai_pcc,
+        dibuat_oleh: jadwal.dibuat_oleh || null,
         status_jadwal: jadwal.status_jadwal
       }
     };

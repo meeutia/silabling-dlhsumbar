@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -31,7 +31,8 @@ function StatusBadge({ status }) {
   );
 }
 
-export function StaffFormModal({ loading, onClose, onSubmit }) {
+export function StaffFormModal({ loading, alert, onClose, onDismissAlert, onSubmit }) {
+  const scrollRef = useRef(null);
   const [hasAccount, setHasAccount] = useState(true);
 
   const [form, setForm] = useState(() => ({
@@ -40,7 +41,13 @@ export function StaffFormModal({ loading, onClose, onSubmit }) {
     status: 'Aktif',
   }));
 
+  useEffect(() => {
+    if (!alert?.message) return;
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [alert?.id, alert?.message]);
+
   const setValue = (key, value) => {
+    onDismissAlert?.();
     setForm((prev) => ({
       ...prev,
       [key]: value,
@@ -48,20 +55,22 @@ export function StaffFormModal({ loading, onClose, onSubmit }) {
   };
 
   const handleHasAccountChange = (checked) => {
+    onDismissAlert?.();
     setHasAccount(checked);
     setForm((prev) => ({
       ...prev,
       hasAccount: checked,
-      role: checked ? (prev.role === 'PCC' ? 'Analis' : prev.role) : '',
+      role: checked ? (['PCC', 'PPS'].includes(prev.role) ? 'Analis' : prev.role) : '',
       ...(checked ? {} : { nik: '', email: '', username: '', password: '', confirmPassword: '', status: 'Aktif' }),
     }));
   };
 
   const handlePccChange = (checked) => {
+    onDismissAlert?.();
     setForm((prev) => ({
       ...prev,
       isPcc: checked,
-      jabatan: checked && !String(prev.jabatan || '').trim() ? 'PCC' : prev.jabatan,
+      jabatan: checked && !String(prev.jabatan || '').trim() ? 'PPS' : prev.jabatan,
     }));
   };
 
@@ -73,7 +82,8 @@ export function StaffFormModal({ loading, onClose, onSubmit }) {
   return (
     <ModalShell title="Tambah Petugas" onClose={onClose} fullHeight>
       <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col">
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-2 pb-4">
+        <div ref={scrollRef} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-2 pb-4">
+          <ModalInlineAlert alert={alert} onClose={onDismissAlert} />
           <label className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">
             <input
               type="checkbox"
@@ -84,7 +94,7 @@ export function StaffFormModal({ loading, onClose, onSubmit }) {
             <div>
               <p className="text-sm font-semibold text-gray-900">Buat akun login untuk petugas</p>
               <p className="text-xs text-gray-500">
-                Matikan opsi ini untuk PCC/pegawai yang hanya dicatat sebagai petugas tanpa akses sistem.
+                Matikan opsi ini untuk PPS/pegawai yang hanya dicatat sebagai petugas tanpa akses sistem.
               </p>
             </div>
           </label>
@@ -109,7 +119,7 @@ export function StaffFormModal({ loading, onClose, onSubmit }) {
               label="Jabatan"
               value={form.jabatan}
               maxLength={100}
-              placeholder="Contoh: PCC, Kepala Sub Bagian Tata Usaha, Pengelola Sampel Pengujian"
+              placeholder="Contoh: PPS, Kepala Sub Bagian Tata Usaha, Pengelola Sampel Pengujian"
               onChange={(value) => setValue('jabatan', value)}
             />
             <TextInput
@@ -155,7 +165,7 @@ export function StaffFormModal({ loading, onClose, onSubmit }) {
                 />
                 <div>
                   <p className="text-sm font-semibold text-gray-900">
-                    Tandai sebagai PCC / Petugas Pengambil Contoh
+                    Tandai sebagai PPS / Petugas Pengambil Sampel
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
                     Gunakan opsi ini untuk petugas pengambilan sampel tanpa harus memberi akses login.
@@ -169,7 +179,7 @@ export function StaffFormModal({ loading, onClose, onSubmit }) {
                 <SelectInput
                   label="Role"
                   value={form.role}
-                  options={STAFF_ROLES.filter((role) => role !== 'PCC')}
+                  options={STAFF_ROLES.filter((role) => role !== 'PPS')}
                   onChange={(value) => setValue('role', value)}
                 />
                 <SelectInput
@@ -237,7 +247,7 @@ function PasswordFields({ form, setValue }) {
           />
           <div>
             <p className="text-sm font-semibold text-gray-900">Input manual</p>
-            <p className="text-xs text-gray-500">Admin menentukan password sendiri.</p>
+            <p className="text-xs text-gray-500">Minimal 8 karakter, wajib mengandung huruf dan angka.</p>
           </div>
         </label>
       </div>
@@ -249,6 +259,7 @@ function PasswordFields({ form, setValue }) {
             type="password"
             value={form.password}
             required
+            placeholder="Minimal 8 karakter, huruf dan angka"
             onChange={(value) => setValue('password', value)}
           />
           <TextInput
@@ -363,12 +374,14 @@ export function CustomerDetailDrawer({
   );
 }
 
-export function ConfirmModal({ action, loading, onClose, onConfirm }) {
+export function ConfirmModal({ action, loading, alert, onClose, onDismissAlert, onConfirm }) {
   const detail = getConfirmDetail(action);
 
   return (
     <ModalShell title={detail.title} onClose={onClose} maxWidth="max-w-md">
       <div className="space-y-5">
+        <ModalInlineAlert alert={alert} onClose={onDismissAlert} />
+
         <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 flex gap-3">
           <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
           <div>
@@ -398,6 +411,39 @@ export function ConfirmModal({ action, loading, onClose, onConfirm }) {
         </div>
       </div>
     </ModalShell>
+  );
+}
+
+
+function ModalInlineAlert({ alert, onClose }) {
+  if (!alert?.message) return null;
+
+  const toneClass = alert.type === 'warning'
+    ? 'border-amber-200 bg-amber-50 text-amber-800'
+    : 'border-red-200 bg-red-50 text-red-800';
+  const iconClass = alert.type === 'warning' ? 'text-amber-600' : 'text-red-600';
+  const title = alert.title || (alert.type === 'warning' ? 'Data perlu dicek' : 'Gagal memproses data');
+
+  return (
+    <div className={`rounded-xl border p-4 ${toneClass}`}>
+      <div className="flex items-start gap-3">
+        <AlertCircle className={`mt-0.5 h-5 w-5 shrink-0 ${iconClass}`} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{title}</p>
+          <p className="mt-1 text-sm leading-relaxed">{alert.message}</p>
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-current opacity-70 hover:bg-white/60 hover:opacity-100"
+            aria-label="Tutup peringatan"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -331,7 +331,7 @@ export const getRequestTrackingSteps = (requestItem) => {
       key: 'testing',
       label: 'Sampel masuk pengujian',
       description: 'Sampel masuk ke alur penugasan dan pengujian analis.',
-      done: status === FPPL_STATUSES.SELESAI || hasAnyLhu,
+      done: [FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU, FPPL_STATUSES.SELESAI].includes(status) || hasAnyLhu,
       active: status === FPPL_STATUSES.PROSES_PENGUJIAN && !hasAnyLhu,
     },
     {
@@ -361,7 +361,7 @@ export const getRequestTrackingSteps = (requestItem) => {
       date: pickupInfo?.tanggal_pengambilan,
       time: pickupInfo?.jam_pengambilan,
       done: Boolean(pickupInfo),
-      active: allLhuDisahkan && !pickupInfo,
+      active: (status === FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU || allLhuDisahkan) && !pickupInfo,
     },
     {
       key: 'completed',

@@ -166,12 +166,13 @@ export function AdminPermohonanDetailView({
     const paymentIsCleared = [
       FPPL_STATUSES.MENUNGGU_SAMPEL,
       FPPL_STATUSES.PROSES_PENGUJIAN,
+      FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU,
       FPPL_STATUSES.SELESAI,
     ].includes(normalizedStatus) || hasSampleReceipt || hasGeneratedSamples || hasLhuData;
     const scheduleStageIsRelevant = paymentIsCleared || activeSchedule || pendingScheduleChanges.length > 0;
     const sampleReceiptStageIsRelevant = paymentIsCleared || hasSampleReceipt || hasGeneratedSamples;
-    const lhuStageIsRelevant = hasLhuData || [FPPL_STATUSES.PROSES_PENGUJIAN, FPPL_STATUSES.SELESAI].includes(normalizedStatus);
-    const lhuPickupStageIsRelevant = hasPickupData || normalizedStatus === FPPL_STATUSES.SELESAI;
+    const lhuStageIsRelevant = hasLhuData || [FPPL_STATUSES.PROSES_PENGUJIAN, FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU, FPPL_STATUSES.SELESAI].includes(normalizedStatus);
+    const lhuPickupStageIsRelevant = hasPickupData || [FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU, FPPL_STATUSES.SELESAI].includes(normalizedStatus);
 
     const showScheduleSection = canProceedAfterKasiDecision && !isStoppedRequest && scheduleStageIsRelevant;
     const showSampleReceiptSection = canProceedAfterKasiDecision && !isStoppedRequest && sampleReceiptStageIsRelevant;
@@ -180,6 +181,7 @@ export function AdminPermohonanDetailView({
       FPPL_STATUSES.MENUNGGU_PEMBAYARAN,
       FPPL_STATUSES.MENUNGGU_SAMPEL,
       FPPL_STATUSES.PROSES_PENGUJIAN,
+      FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU,
       FPPL_STATUSES.SELESAI,
       FPPL_STATUSES.DITOLAK_ADMIN,
       FPPL_STATUSES.DITOLAK_KASI,

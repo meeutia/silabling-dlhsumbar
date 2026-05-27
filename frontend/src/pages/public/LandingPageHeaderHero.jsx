@@ -141,7 +141,7 @@ export function LandingPageHeader({ onNavigate, scrollToSection }) {
 
 export function LandingPageHero({ scrollToSection }) {
   return (
-      <section id="home" className="relative flex min-h-[560px] items-center justify-center overflow-hidden md:h-[600px]">
+      <section id="home" className="relative flex min-h-screen items-center justify-center overflow-hidden md:h-[600px]">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0">
           <ImageWithFallback 

@@ -19,10 +19,16 @@ import {
 } from '../../lhu/lhuReviewUtils';
 import { WorksheetFilesPreviewPane } from '../../penyelia/penugasan/detail/WorksheetFilesPreviewPane';
 
-function StatCard({ title, subtitle, value, icon, iconBg, iconColor }) {
+function StatCard({ title, subtitle, value, icon, iconBg, iconColor, onClick }) {
   const IconComponent = icon;
+  const CardElement = typeof onClick === 'function' ? 'button' : 'div';
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <CardElement
+      type={typeof onClick === 'function' ? 'button' : undefined}
+      onClick={onClick}
+      className={`w-full rounded-xl border border-gray-200 bg-white p-6 text-left shadow-sm transition-all hover:shadow-md ${typeof onClick === 'function' ? 'hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2' : ''}`}
+    >
       <div className="mb-4 flex items-start justify-between">
         <div className={`rounded-lg p-3 ${iconBg}`}>
           <IconComponent className={`h-6 w-6 ${iconColor}`} />
@@ -32,7 +38,7 @@ function StatCard({ title, subtitle, value, icon, iconBg, iconColor }) {
       <p className="mb-1 text-2xl font-bold text-gray-900">{value}</p>
       <p className="mb-1 text-sm font-medium text-gray-900">{title}</p>
       <p className="text-xs text-gray-600">{subtitle}</p>
-    </div>
+    </CardElement>
   );
 }
 
@@ -134,7 +140,7 @@ export function KasiLhuHeader() {
   );
 }
 
-export function KasiLhuStats({ summary }) {
+export function KasiLhuStats({ summary, onSelectTab, onSearchChange }) {
   return (
     <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
       <StatCard
@@ -144,6 +150,10 @@ export function KasiLhuStats({ summary }) {
         icon={FileText}
         iconBg="bg-blue-50"
         iconColor="text-blue-700"
+        onClick={() => {
+          onSelectTab?.('antrean');
+          onSearchChange?.('');
+        }}
       />
 
       <StatCard
@@ -153,6 +163,10 @@ export function KasiLhuStats({ summary }) {
         icon={ClipboardCheck}
         iconBg="bg-amber-50"
         iconColor="text-amber-700"
+        onClick={() => {
+          onSelectTab?.('antrean');
+          onSearchChange?.('');
+        }}
       />
 
       <StatCard
@@ -162,6 +176,10 @@ export function KasiLhuStats({ summary }) {
         icon={AlertCircle}
         iconBg="bg-red-50"
         iconColor="text-red-700"
+        onClick={() => {
+          onSelectTab?.('antrean');
+          onSearchChange?.('revisi');
+        }}
       />
 
       <StatCard
@@ -171,6 +189,10 @@ export function KasiLhuStats({ summary }) {
         icon={Filter}
         iconBg="bg-emerald-50"
         iconColor="text-emerald-700"
+        onClick={() => {
+          onSelectTab?.('antrean');
+          onSearchChange?.('');
+        }}
       />
     </div>
   );

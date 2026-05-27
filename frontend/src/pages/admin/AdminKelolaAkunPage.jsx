@@ -3,6 +3,7 @@ import { adminAccountApi } from '../../api/adminAccountApi';
 import { ErrorState } from '../../components/common/ErrorState';
 import { ToastNotification } from '../../components/common/ToastNotification';
 import { buildQuery, getToggleValue, sortStaffByBackendRoleOrder } from './AdminKelolaAkun.helpers';
+import { validatePasswordPolicy } from '../../utils/passwordPolicy';
 import {
   Header,
   TabButton,
@@ -36,12 +37,23 @@ export function AdminKelolaAkunPage() {
   const [selected, setSelected] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
   const [toast, setToast] = useState(null);
+  const [modalAlert, setModalAlert] = useState(null);
 
   const staffCount = staffRows.length;
   const customerCount = customerRows.length;
 
   const showToast = (nextToast) => {
     setToast(nextToast);
+  };
+
+  const showModalError = (error, title = 'Data perlu dicek') => {
+    const message = typeof error === 'string' ? error : (error?.message || 'Terjadi kesalahan.');
+    setModalAlert({
+      id: Date.now(),
+      type: 'error',
+      title,
+      message,
+    });
   };
 
   const handleError = (error) => {
@@ -57,6 +69,7 @@ export function AdminKelolaAkunPage() {
     setModal(null);
     setSelected(null);
     setConfirmAction(null);
+    setModalAlert(null);
   };
 
   const loadStaff = async () => {
@@ -136,17 +149,33 @@ export function AdminKelolaAkunPage() {
   }, [activeTab, search, staffRole, staffStatus, customerStatus]);
 
   const handleSubmitStaff = async (formData) => {
+    const hasAccount = Boolean(formData.hasAccount);
+
+    if (hasAccount && formData.passwordMode === 'manual') {
+      const passwordError = validatePasswordPolicy(formData.password);
+
+      if (passwordError) {
+        showModalError(passwordError);
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        showModalError('Konfirmasi password tidak sesuai.');
+        return;
+      }
+    }
+
+    setModalAlert(null);
     setActionLoading(true);
 
     try {
-      const hasAccount = Boolean(formData.hasAccount);
       const payload = {
         name: formData.name,
         jabatan: formData.jabatan,
         is_pcc: formData.isPcc ? 1 : 0,
         nip: formData.nip,
         phone: formData.phone,
-        role: hasAccount ? formData.role : (formData.isPcc ? 'PCC' : ''),
+        role: hasAccount ? formData.role : (formData.isPcc ? 'PPS' : ''),
         status: formData.status,
         hasAccount,
         passwordMode: formData.passwordMode,
@@ -171,7 +200,7 @@ export function AdminKelolaAkunPage() {
       closeModal();
       await loadStaff();
     } catch (error) {
-      handleError(error);
+      showModalError(error);
     } finally {
       setActionLoading(false);
     }
@@ -180,6 +209,7 @@ export function AdminKelolaAkunPage() {
   const handleConfirmAction = async () => {
     if (!confirmAction) return;
 
+    setModalAlert(null);
     setActionLoading(true);
 
     try {
@@ -218,7 +248,7 @@ export function AdminKelolaAkunPage() {
 
       closeModal();
     } catch (error) {
-      handleError(error);
+      showModalError(error);
     } finally {
       setActionLoading(false);
     }
@@ -226,11 +256,13 @@ export function AdminKelolaAkunPage() {
 
   const openAddStaff = () => {
     setSelected(null);
+    setModalAlert(null);
     setModal('staff-form');
   };
 
 
   const openConfirm = (type, target) => {
+    setModalAlert(null);
     setConfirmAction({ type, target });
     setModal('confirm');
   };
@@ -308,6 +340,8 @@ export function AdminKelolaAkunPage() {
         <StaffFormModal
           loading={actionLoading}
           onClose={closeModal}
+          alert={modalAlert}
+          onDismissAlert={() => setModalAlert(null)}
           onSubmit={handleSubmitStaff}
         />
       )}
@@ -335,6 +369,8 @@ export function AdminKelolaAkunPage() {
           action={confirmAction}
           loading={actionLoading}
           onClose={closeModal}
+          alert={modalAlert}
+          onDismissAlert={() => setModalAlert(null)}
           onConfirm={handleConfirmAction}
         />
       )}

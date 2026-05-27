@@ -1,6 +1,6 @@
+import { useEffect, useRef } from 'react';
 import { AlertCircle, AlertTriangle, CheckCircle, Clock, Loader2, X } from 'lucide-react';
 import { getTodayYmd } from '../../../utils/businessDays';
-import { showWarning } from '../../../utils/feedback';
 
 export function AdminLhuPickupModal({
   mode,
@@ -16,7 +16,20 @@ export function AdminLhuPickupModal({
   showCompletePickupConfirm = false,
   isBusinessDay,
   timeOptions = [],
+  modalAlert = null,
+  onModalAlert = null,
+  onClearModalAlert = null,
 }) {
+  const bodyRef = useRef(null);
+
+  useEffect(() => {
+    if (!modalAlert?.message) return;
+
+    window.setTimeout(() => {
+      bodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 60);
+  }, [modalAlert?.message]);
+
   if (!mode || !selectedPickup) {
     return null;
   }
@@ -54,8 +67,16 @@ export function AdminLhuPickupModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto p-6">
           <div className="space-y-6">
+            {modalAlert?.message && (
+              <ModalAlert
+                title={modalAlert.title}
+                message={modalAlert.message}
+                tone={modalAlert.tone}
+                onClose={onClearModalAlert}
+              />
+            )}
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
@@ -80,9 +101,15 @@ export function AdminLhuPickupModal({
                 setPickupForm={setPickupForm}
                 isBusinessDay={isBusinessDay}
                 timeOptions={timeOptions}
+                onModalAlert={onModalAlert}
+                onClearModalAlert={onClearModalAlert}
               />
             ) : (
-              <CompletePickupForm pickupForm={pickupForm} setPickupForm={setPickupForm} />
+              <CompletePickupForm
+                pickupForm={pickupForm}
+                setPickupForm={setPickupForm}
+                onClearModalAlert={onClearModalAlert}
+              />
             )}
 
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
@@ -136,6 +163,36 @@ export function AdminLhuPickupModal({
   );
 }
 
+
+function ModalAlert({ title = 'Data perlu dicek', message, tone = 'warning', onClose = null }) {
+  const toneClass = tone === 'error'
+    ? 'border-red-200 bg-red-50 text-red-800'
+    : 'border-amber-200 bg-amber-50 text-amber-800';
+  const iconClass = tone === 'error' ? 'text-red-600' : 'text-amber-600';
+
+  return (
+    <div className={`rounded-xl border px-4 py-3 ${toneClass}`} role="alert">
+      <div className="flex items-start gap-3">
+        <AlertCircle className={`mt-0.5 h-5 w-5 shrink-0 ${iconClass}`} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{title}</p>
+          <p className="mt-1 whitespace-pre-line text-sm leading-5">{message}</p>
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-current opacity-70 hover:bg-white/60 hover:opacity-100"
+            aria-label="Tutup peringatan"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InfoRow({ label, value }) {
   return (
     <div
@@ -149,7 +206,14 @@ function InfoRow({ label, value }) {
   );
 }
 
-function SchedulePickupForm({ pickupForm, setPickupForm, isBusinessDay, timeOptions = [] }) {
+function SchedulePickupForm({
+  pickupForm,
+  setPickupForm,
+  isBusinessDay,
+  timeOptions = [],
+  onModalAlert = null,
+  onClearModalAlert = null,
+}) {
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
       <div className="mb-4">
@@ -175,7 +239,11 @@ function SchedulePickupForm({ pickupForm, setPickupForm, isBusinessDay, timeOpti
               const nextDate = event.target.value;
               const dateCheck = typeof isBusinessDay === 'function' ? isBusinessDay(nextDate) : { valid: true };
               if (!dateCheck.valid) {
-                showWarning(dateCheck.reason || 'Tanggal pengambilan LHU harus hari kerja.');
+                onModalAlert?.({
+                  tone: 'warning',
+                  title: 'Tanggal tidak valid',
+                  message: dateCheck.reason || 'Tanggal pengambilan LHU harus hari kerja.',
+                });
                 setPickupForm((prev) => ({
                   ...prev,
                   tanggalPengambilan: '',
@@ -183,6 +251,7 @@ function SchedulePickupForm({ pickupForm, setPickupForm, isBusinessDay, timeOpti
                 return;
               }
 
+              onClearModalAlert?.();
               setPickupForm((prev) => ({
                 ...prev,
                 tanggalPengambilan: nextDate,
@@ -199,12 +268,13 @@ function SchedulePickupForm({ pickupForm, setPickupForm, isBusinessDay, timeOpti
 
           <select
             value={pickupForm.jamPengambilan}
-            onChange={(event) =>
+            onChange={(event) => {
+              onClearModalAlert?.();
               setPickupForm((prev) => ({
                 ...prev,
                 jamPengambilan: event.target.value,
-              }))
-            }
+              }));
+            }}
             className="w-full rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
           >
             <option value="">Pilih jam</option>
@@ -228,12 +298,13 @@ function SchedulePickupForm({ pickupForm, setPickupForm, isBusinessDay, timeOpti
 
         <textarea
           value={pickupForm.catatan}
-          onChange={(event) =>
+          onChange={(event) => {
+            onClearModalAlert?.();
             setPickupForm((prev) => ({
               ...prev,
               catatan: event.target.value,
-            }))
-          }
+            }));
+          }}
           rows={4}
           placeholder="Contoh: LHU dapat diambil di loket administrasi pada jam kerja."
           className="w-full resize-none rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
@@ -295,7 +366,7 @@ function CompletePickupConfirmModal({ selectedPickup, saving, onCancel, onConfir
   );
 }
 
-function CompletePickupForm({ pickupForm, setPickupForm }) {
+function CompletePickupForm({ pickupForm, setPickupForm, onClearModalAlert = null }) {
   return (
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
       <div className="mb-4">
@@ -315,12 +386,13 @@ function CompletePickupForm({ pickupForm, setPickupForm }) {
         <input
           type="text"
           value={pickupForm.namaPengambil}
-          onChange={(event) =>
+          onChange={(event) => {
+            onClearModalAlert?.();
             setPickupForm((prev) => ({
               ...prev,
               namaPengambil: event.target.value,
-            }))
-          }
+            }));
+          }}
           placeholder="Masukkan nama pengambil LHU"
           className="w-full rounded-lg border border-blue-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
         />

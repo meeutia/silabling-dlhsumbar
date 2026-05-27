@@ -203,6 +203,7 @@ export const buildDetailTimelineItems = ({
         Boolean(paymentConfirmedDate) ||
         statusAktif === FPPL_STATUSES.MENUNGGU_SAMPEL ||
         statusAktif === FPPL_STATUSES.PROSES_PENGUJIAN ||
+        statusAktif === FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU ||
         statusAktif === FPPL_STATUSES.SELESAI,
     },
     ...changeItems.map((item) => ({ ...item, order: item.order ?? 45 })),
@@ -218,6 +219,7 @@ export const buildDetailTimelineItems = ({
         Boolean(scheduleLogDate) ||
         statusAktif === FPPL_STATUSES.MENUNGGU_SAMPEL ||
         statusAktif === FPPL_STATUSES.PROSES_PENGUJIAN ||
+        statusAktif === FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU ||
         statusAktif === FPPL_STATUSES.SELESAI,
     },
     {
@@ -226,7 +228,7 @@ export const buildDetailTimelineItems = ({
       order: 60,
       status: 'Sampel Diterima',
       note: `${sampleCountText} telah diterima oleh laboratorium.`,
-      show: Boolean(sampleReceivedDate) || statusAktif === FPPL_STATUSES.PROSES_PENGUJIAN || statusAktif === FPPL_STATUSES.SELESAI,
+      show: Boolean(sampleReceivedDate) || statusAktif === FPPL_STATUSES.PROSES_PENGUJIAN || statusAktif === FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU || statusAktif === FPPL_STATUSES.SELESAI,
     },
     {
       date: formatTimelineDateValue(testingStartedDate),
@@ -236,6 +238,7 @@ export const buildDetailTimelineItems = ({
       note: 'Sampel sedang dalam proses pengujian.',
       show:
         statusAktif === FPPL_STATUSES.PROSES_PENGUJIAN ||
+        statusAktif === FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU ||
         statusAktif === FPPL_STATUSES.SELESAI ||
         Boolean(sampleReceivedDate),
     },

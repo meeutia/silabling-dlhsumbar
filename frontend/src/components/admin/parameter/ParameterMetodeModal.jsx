@@ -1,7 +1,7 @@
-import React from 'react';
-import { Truck, X } from 'lucide-react';
-import { stripHtml } from './parameterFormatters';
-import { ScientificInput, ScientificTextarea } from './AdminKelolaParameterFormControls';
+import React, { useEffect, useRef } from 'react';
+import { AlertCircle, CheckCircle2, Info, TriangleAlert, Truck, X } from 'lucide-react';
+import { formatRupiahInput, stripHtml } from './parameterFormatters';
+import { ScientificInput } from './AdminKelolaParameterFormControls';
 
 export function ParameterMetodeModal({
   selectedItem,
@@ -12,7 +12,21 @@ export function ParameterMetodeModal({
   onClose,
   onChange,
   onSubmit,
+  modalAlert,
+  onModalAlertClose,
 }) {
+  const scrollBodyRef = useRef(null);
+  const alertRef = useRef(null);
+
+  useEffect(() => {
+    if (!modalAlert?.show) return;
+
+    window.requestAnimationFrame(() => {
+      scrollBodyRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      alertRef.current?.focus({ preventScroll: true });
+    });
+  }, [modalAlert?.id, modalAlert?.show]);
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
@@ -37,8 +51,13 @@ export function ParameterMetodeModal({
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 min-h-0">
-          <form id="form-param-metode" onSubmit={onSubmit} className="space-y-6">
+        <div ref={scrollBodyRef} className="p-6 overflow-y-auto flex-1 min-h-0">
+          <form id="form-param-metode" onSubmit={onSubmit} className="space-y-6" noValidate>
+            <ModalInlineAlert
+              ref={alertRef}
+              alert={modalAlert}
+              onClose={onModalAlertClose}
+            />
             <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
@@ -220,12 +239,13 @@ export function ParameterMetodeModal({
                   </label>
 
                   <input
-                    type="number"
+                    type="text"
                     name="tarif"
-                    value={formData.tarif || 0}
+                    value={formatRupiahInput(formData.tarif)}
                     onChange={onChange}
-                    min="0"
+                    inputMode="numeric"
                     className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                    placeholder="Rp 70.000"
                     required
                   />
                 </div>
@@ -284,3 +304,75 @@ export function ParameterMetodeModal({
     </div>
   );
 }
+
+
+const ALERT_STYLE = {
+  success: {
+    icon: CheckCircle2,
+    wrapper: 'border-emerald-200 bg-emerald-50',
+    iconClass: 'text-emerald-600',
+    titleClass: 'text-emerald-900',
+    messageClass: 'text-emerald-800',
+  },
+  error: {
+    icon: AlertCircle,
+    wrapper: 'border-red-200 bg-red-50',
+    iconClass: 'text-red-600',
+    titleClass: 'text-red-900',
+    messageClass: 'text-red-800',
+  },
+  warning: {
+    icon: TriangleAlert,
+    wrapper: 'border-amber-200 bg-amber-50',
+    iconClass: 'text-amber-600',
+    titleClass: 'text-amber-900',
+    messageClass: 'text-amber-800',
+  },
+  info: {
+    icon: Info,
+    wrapper: 'border-blue-200 bg-blue-50',
+    iconClass: 'text-blue-600',
+    titleClass: 'text-blue-900',
+    messageClass: 'text-blue-800',
+  },
+};
+
+const ModalInlineAlert = React.forwardRef(function ModalInlineAlert({ alert, onClose }, ref) {
+  if (!alert?.show) return null;
+
+  const style = ALERT_STYLE[alert.type] || ALERT_STYLE.info;
+  const Icon = style.icon;
+
+  return (
+    <div
+      ref={ref}
+      tabIndex={-1}
+      className={`rounded-xl border p-4 outline-none ${style.wrapper}`}
+      role="alert"
+    >
+      <div className="flex items-start gap-3">
+        <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${style.iconClass}`} />
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm font-semibold ${style.titleClass}`}>
+            {alert.title || 'Perhatian'}
+          </p>
+          {alert.message ? (
+            <p className={`mt-1 text-sm leading-relaxed ${style.messageClass}`}>
+              {alert.message}
+            </p>
+          ) : null}
+        </div>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-500 hover:bg-white/70"
+            aria-label="Tutup peringatan"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+});

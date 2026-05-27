@@ -52,7 +52,7 @@ export function PelangganDashboardPage({ userName, onNavigate }) {
     <div className="p-4 md:p-8">
       <div className="mx-auto max-w-7xl">
         <PelangganWelcomeHeader userName={userName} errorMessage={errorMessage} />
-        <PelangganStatsCards infoCards={infoCards} />
+        <PelangganStatsCards infoCards={infoCards} onNavigate={onNavigate} />
         <PelangganCreateRequestCta onNavigate={onNavigate} />
         <PelangganTariffPreview tariffData={tariffData} />
         <PelangganRecentActivities

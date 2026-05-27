@@ -457,6 +457,11 @@ export function AnalisPenugasanPage({
       color: 'bg-blue-100 text-blue-700',
       iconBg: 'bg-blue-50',
       trend: 'Penugasan',
+      actionLabel: 'Tampilkan penugasan aktif',
+      onClick: () => {
+        setActiveTab('saat_ini');
+        setSearchQuery('');
+      },
     },
     {
       label: 'Penugasan Saat Ini',
@@ -466,6 +471,11 @@ export function AnalisPenugasanPage({
       color: 'bg-amber-100 text-amber-700',
       iconBg: 'bg-amber-50',
       trend: 'Aktif',
+      actionLabel: 'Tampilkan penugasan saat ini',
+      onClick: () => {
+        setActiveTab('saat_ini');
+        setSearchQuery('');
+      },
     },
     {
       label: 'Perlu Revisi',
@@ -475,6 +485,11 @@ export function AnalisPenugasanPage({
       color: 'bg-red-100 text-red-700',
       iconBg: 'bg-red-50',
       trend: 'Prioritas',
+      actionLabel: 'Tampilkan tugas yang perlu revisi',
+      onClick: () => {
+        setActiveTab('saat_ini');
+        setSearchQuery('revisi');
+      },
     },
     {
       label: 'Riwayat',
@@ -484,6 +499,11 @@ export function AnalisPenugasanPage({
       color: 'bg-emerald-100 text-emerald-700',
       iconBg: 'bg-emerald-50',
       trend: 'Selesai',
+      actionLabel: 'Tampilkan riwayat tugas',
+      onClick: () => {
+        setActiveTab('riwayat');
+        setSearchQuery('');
+      },
     },
   ];
 

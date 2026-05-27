@@ -1,25 +1,25 @@
 // Urutan ini disamakan dengan STAFF_ROLE_ORDER di backend:
-// Admin -> Kepala Lab -> Kasi -> QC -> Penyelia -> Analis -> PCC.
+// Kepala Sub Bagian Tata Usaha -> PSP -> Kepala Lab -> Kasi -> QC -> Penyelia -> Analis -> PPS.
 export const STAFF_ROLES = [
-  'Admin',
-  'Petugas Pendaftaran',
+  'Kepala Sub Bagian Tata Usaha',
+  'Pengelola Sampel Pengujian',
   'Kepala Lab',
   'Kasi Pengujian',
   'Pengendalian Mutu',
   'Penyelia',
   'Analis',
-  'PCC',
+  'PPS',
 ];
 
 export const STAFF_ROLE_SORT_ORDER = [
-  'Admin',
-  'Petugas Pendaftaran',
+  'Kepala Sub Bagian Tata Usaha',
+  'Pengelola Sampel Pengujian',
   'Kepala Lab',
   'Kasi Pengujian',
   'Pengendalian Mutu',
   'Penyelia',
   'Analis',
-  'PCC',
+  'PPS',
   'Petugas',
 ];
 
@@ -90,8 +90,8 @@ export function getStaffRoleOrderValue(row = {}) {
   if (Number.isFinite(backendOrder)) return backendOrder;
 
   const role = text(row?.role);
-  if (Number(row?.is_pcc || 0) === 1 || role === 'PCC') {
-    return STAFF_ROLE_SORT_ORDER.indexOf('PCC');
+  if (Number(row?.is_pcc || 0) === 1 || ['PCC', 'PPS'].includes(role)) {
+    return STAFF_ROLE_SORT_ORDER.indexOf('PPS');
   }
 
   const index = STAFF_ROLE_SORT_ORDER.indexOf(role);

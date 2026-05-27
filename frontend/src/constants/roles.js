@@ -6,4 +6,5 @@ export const ROLES = Object.freeze({
   KASI: 'kasi',
   KALAB: 'kalab',
   QC: 'qc',
+  PSP: 'psp',
 });

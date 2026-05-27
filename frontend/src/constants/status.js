@@ -15,7 +15,7 @@ export const STATUS_BADGE_CLASS = {
   'Menunggu Verifikasi Admin': 'bg-amber-100 text-amber-700 border-amber-200',
   'Menunggu Penentuan Metode': 'bg-indigo-100 text-indigo-700 border-indigo-200',
   'Menunggu Pembayaran': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Menunggu Verifikasi Pembayaran': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Menunggu Verifikasi Pembayaran': 'bg-yellow-100 text-yellow-700 border-yellow-200',
   'Menunggu Sampel': 'bg-purple-100 text-purple-700 border-purple-200',
   'Menunggu Penugasan': 'bg-sky-100 text-sky-700 border-sky-200',
   'Belum Dijadwalkan': 'bg-amber-100 text-amber-700 border-amber-200',
@@ -26,6 +26,7 @@ export const STATUS_BADGE_CLASS = {
   'Sudah Diambil': 'bg-emerald-100 text-emerald-700 border-emerald-200',
 
   'Proses Pengujian': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'Menunggu Pengambilan LHU': 'bg-teal-100 text-teal-700 border-teal-200',
   'Diproses Analis': 'bg-cyan-100 text-cyan-700 border-cyan-200',
   'Menunggu Verifikasi Penyelia': 'bg-orange-100 text-orange-700 border-orange-200',
   'Disetujui Penyelia': 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -57,7 +58,6 @@ export const STATUS_BADGE_CLASS = {
 };
 
 export const STATUS_DISPLAY_LABELS = Object.freeze({
-  'Menunggu Verifikasi Pembayaran': 'Menunggu Pembayaran',
   'Menunggu Verifikasi Mutu': LHU_STATUSES.WAIT_QC,
   'Revisi QC': LHU_STATUSES.WAIT_QC,
   'Disetujui Mutu': LHU_STATUSES.WAIT_KALAB,

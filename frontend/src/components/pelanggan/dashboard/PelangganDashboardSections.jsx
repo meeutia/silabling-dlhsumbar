@@ -45,16 +45,18 @@ export function PelangganWelcomeHeader({ userName, errorMessage }) {
   );
 }
 
-export function PelangganStatsCards({ infoCards }) {
+export function PelangganStatsCards({ infoCards, onNavigate }) {
   return (
     <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
       {infoCards.map((card) => {
         const Icon = card.icon;
 
         return (
-          <div
+          <button
             key={card.title}
-            className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+            type="button"
+            onClick={() => onNavigate?.('status')}
+            className="w-full rounded-xl border border-gray-100 bg-white p-6 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
           >
             <div className="mb-4 flex items-start gap-4">
               <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${card.bgColor}`}>
@@ -66,7 +68,7 @@ export function PelangganStatsCards({ infoCards }) {
                 <p className="mt-1 text-xs text-gray-500">{card.trend}</p>
               </div>
             </div>
-          </div>
+          </button>
         );
       })}
     </div>

@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { DetailSampleScheduleSection } from '../../components/pelanggan/detail/DetailSampleScheduleSection';
 import { DetailTimelineSection } from '../../components/pelanggan/detail/DetailTimelineSection';
 import { DetailPermohonanHeader } from '../../components/pelanggan/detail/DetailPermohonanHeader';
@@ -7,6 +9,15 @@ import { useDetailPermohonanPage } from '../../components/pelanggan/detail/useDe
 
 export function PelangganDetailPermohonanPage({ request, onBack }) {
   const page = useDetailPermohonanPage(request);
+  const customerCancelModalRef = useRef(null);
+
+  useEffect(() => {
+    if (!page.customerCancelModalOpen || !page.customerCancelAlert) return;
+
+    window.setTimeout(() => {
+      customerCancelModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
+  }, [page.customerCancelAlert, page.customerCancelModalOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -58,7 +69,9 @@ export function PelangganDetailPermohonanPage({ request, onBack }) {
             paymentGateway={page.paymentGateway}
             paymentProofError={page.paymentProofError}
             paymentProofFile={page.paymentProofFile}
+            paymentProofInputRef={page.paymentProofInputRef}
             handlePaymentProofChange={page.handlePaymentProofChange}
+            handleClearPaymentProof={page.handleClearPaymentProof}
             handleConfirmPayment={page.handleConfirmPayment}
             isWaitingPaymentVerification={page.isWaitingPaymentVerification}
             isGatewayExpired={page.isGatewayExpired}
@@ -104,6 +117,7 @@ export function PelangganDetailPermohonanPage({ request, onBack }) {
               handleOpenScheduleChangeForm={page.handleOpenScheduleChangeForm}
               handleCancelScheduleChangeForm={page.handleCancelScheduleChangeForm}
               handleConfirmSchedule={page.handleConfirmSchedule}
+              scheduleChangeAlert={page.scheduleChangeAlert}
               scheduleChangeForm={page.scheduleChangeForm}
               setScheduleChangeForm={page.setScheduleChangeForm}
               handleScheduleChangeDateChange={page.handleScheduleChangeDateChange}
@@ -119,8 +133,8 @@ export function PelangganDetailPermohonanPage({ request, onBack }) {
       </div>
 
       {page.customerCancelModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div ref={customerCancelModalRef} className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-100 bg-white shadow-xl">
             <div className="p-6 border-b border-gray-100">
               <h3 className="text-lg font-bold text-gray-900">Batalkan Permohonan?</h3>
               <p className="text-sm text-gray-600 mt-2">
@@ -128,6 +142,18 @@ export function PelangganDetailPermohonanPage({ request, onBack }) {
                 Catatan pembatalan tidak akan disimpan.
               </p>
             </div>
+
+            {page.customerCancelAlert && (
+              <div className="mx-6 mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                  <div>
+                    <p className="font-semibold text-red-900">Data perlu dicek</p>
+                    <p className="mt-1 leading-relaxed">{page.customerCancelAlert}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="p-6 flex flex-col sm:flex-row gap-3 justify-end">
               <button

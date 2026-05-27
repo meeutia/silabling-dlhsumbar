@@ -1,4 +1,5 @@
-import { CalendarClock, CheckCircle2, ChevronDown, ChevronUp, MapPin, X } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { AlertCircle, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, MapPin, X } from 'lucide-react';
 import { FPPL_STATUSES } from '../../../utils/fpplStatus';
 
 export function DetailSampleScheduleSection({
@@ -29,6 +30,7 @@ export function DetailSampleScheduleSection({
   handleOpenScheduleChangeForm,
   handleCancelScheduleChangeForm,
   handleConfirmSchedule,
+  scheduleChangeAlert,
   scheduleChangeForm,
   setScheduleChangeForm,
   handleScheduleChangeDateChange,
@@ -38,7 +40,7 @@ export function DetailSampleScheduleSection({
   handleScheduleChangeSubmit,
 }) {
   const isPetugasSampling = requestData?.jenis_pengambilan_sampel === 'Petugas';
-  const isSampleReceived = [FPPL_STATUSES.PROSES_PENGUJIAN, FPPL_STATUSES.SELESAI].includes(statusAktif);
+  const isSampleReceived = [FPPL_STATUSES.PROSES_PENGUJIAN, FPPL_STATUSES.MENUNGGU_PENGAMBILAN_LHU, FPPL_STATUSES.SELESAI].includes(statusAktif);
   const shouldShowSampleSchedule = Boolean(activeSchedule) && [
     FPPL_STATUSES.MENUNGGU_PENENTUAN_PARAMETER,
     FPPL_STATUSES.MENUNGGU_PEMBAYARAN,
@@ -105,9 +107,19 @@ export function DetailSampleScheduleSection({
   const getScheduleKindLabel = (jenisJadwal) =>
     jenisJadwal === 'LHU' ? 'Jadwal Pengambilan LHU' : 'Jadwal Sampel';
 
+  const scheduleChangeModalRef = useRef(null);
+
+  useEffect(() => {
+    if (!activeScheduleChangeType || !scheduleChangeAlert) return;
+
+    window.setTimeout(() => {
+      scheduleChangeModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 50);
+  }, [activeScheduleChangeType, scheduleChangeAlert]);
+
   const renderScheduleChangeForm = (jenisJadwal) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-      <form onSubmit={handleScheduleChangeSubmit} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl">
+      <form ref={scheduleChangeModalRef} onSubmit={handleScheduleChangeSubmit} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-100 bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-lg font-bold text-gray-900">Ajukan Perubahan {getScheduleKindLabel(jenisJadwal)}</p>
@@ -125,6 +137,18 @@ export function DetailSampleScheduleSection({
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {scheduleChangeAlert && (
+          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+              <div>
+                <p className="font-semibold text-red-900">Data perlu dicek</p>
+                <p className="mt-1 leading-relaxed">{scheduleChangeAlert}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-2">
           <div>

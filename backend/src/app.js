@@ -55,6 +55,7 @@ const lhuRoutes = require('./routes/lhu');
 const lkaRevisionRoutes = require('./routes/lka-revision');
 const adminParameterRoutes = require('./routes/admin-parameter');
 const adminAccountRoutes = require('./routes/admin-account');
+const adminPaymentAccountRoutes = require('./routes/admin-payment-account');
 const fileRoutes = require('./routes/file');
 const PaymentService = require('./services/payment/payment.service');
 const { createRateLimit } = require('./middlewares/rate-limit');
@@ -68,6 +69,7 @@ app.use('/lhu', lhuRoutes);
 app.use('/lka-revisions', lkaRevisionRoutes);
 app.use('/admin/parameters', adminParameterRoutes);
 app.use('/admin/accounts', adminAccountRoutes);
+app.use('/admin/payment-accounts', adminPaymentAccountRoutes);
 const fileAccessLimiter = createRateLimit({
   windowMs: 60 * 1000,
   max: 120,

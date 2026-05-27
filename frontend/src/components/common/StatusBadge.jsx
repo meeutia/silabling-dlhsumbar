@@ -1,7 +1,7 @@
 import { getStatusBadgeClass, getStatusDisplayLabel } from '../../constants/status';
 import { normalizeFpplStatus } from '../../utils/fpplStatus';
 
-const UPPERCASE_TOKENS = new Set(['LHU', 'QC', 'KASI', 'KALAB', 'FPPL', 'PCC']);
+const UPPERCASE_TOKENS = new Set(['LHU', 'QC', 'KASI', 'KALAB', 'FPPL', 'PCC', 'PPS']);
 
 export function formatStatusLabel(status, fallback = '-') {
   if (status === null || status === undefined || status === '') return fallback;

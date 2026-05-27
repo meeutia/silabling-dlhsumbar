@@ -60,6 +60,7 @@ const Fppl = sequelize.define('fppl', {
       'Menunggu Verifikasi Pembayaran',
       'Menunggu Sampel',
       'Proses Pengujian',
+      'Menunggu Pengambilan LHU',
       'Selesai',
       'Dibatalkan',
       'Dibatalkan Pelanggan',

@@ -207,6 +207,20 @@ ALTER TABLE `user`
   ADD UNIQUE KEY `uq_user_email` (`email`),
   ADD KEY `idx_user_role` (`id_role`);
 
+ALTER TABLE `user_refresh_session`
+  ADD PRIMARY KEY (`id_refresh_session`),
+  ADD UNIQUE KEY `uq_refresh_token_hash` (`refresh_token_hash`),
+  ADD KEY `idx_refresh_session_nik` (`nik`),
+  ADD KEY `idx_refresh_session_expires_at` (`refresh_token_expires_at`),
+  ADD KEY `idx_refresh_session_revoked_at` (`revoked_at`);
+
+ALTER TABLE `rekening_pembayaran`
+  ADD PRIMARY KEY (`id_rekening`),
+  ADD KEY `idx_rekening_is_active` (`is_active`),
+  ADD KEY `idx_rekening_is_primary` (`is_primary`),
+  ADD KEY `idx_rekening_created_by` (`created_by`),
+  ADD KEY `idx_rekening_updated_by` (`updated_by`);
+
 ALTER TABLE `aktivitas_sistem_log`
   ADD CONSTRAINT `fk_aktivitas_dibuat_oleh` FOREIGN KEY (`dibuat_oleh`) REFERENCES `user` (`nik`) ON DELETE SET NULL ON UPDATE CASCADE;
 
@@ -338,5 +352,12 @@ ALTER TABLE `sampel_parameter`
 
 ALTER TABLE `user`
   ADD CONSTRAINT `fk_user_role` FOREIGN KEY (`id_role`) REFERENCES `role` (`id_role`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE `user_refresh_session`
+  ADD CONSTRAINT `fk_refresh_session_user_nik` FOREIGN KEY (`nik`) REFERENCES `user` (`nik`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `rekening_pembayaran`
+  ADD CONSTRAINT `fk_rekening_created_by` FOREIGN KEY (`created_by`) REFERENCES `user` (`nik`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_rekening_updated_by` FOREIGN KEY (`updated_by`) REFERENCES `user` (`nik`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 SET FOREIGN_KEY_CHECKS = 1;
