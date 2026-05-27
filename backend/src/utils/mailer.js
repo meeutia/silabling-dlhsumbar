@@ -83,17 +83,41 @@ async function sendMail({ to, subject, text, html, attachments = [] }) {
     };
   }
 
-  const transporter = nodemailer.createTransport(getMailerConfig());
-  const defaultAttachments = getDefaultEmailAttachments(html);
+  try {
+    const transporter = nodemailer.createTransport(getMailerConfig());
+    const defaultAttachments = getDefaultEmailAttachments(html);
 
-  return transporter.sendMail({
-    from: process.env.MAIL_FROM || process.env.SMTP_USER,
-    to,
-    subject,
-    text,
-    html,
-    attachments: [...defaultAttachments, ...attachments],
-  });
+    console.log(`[mailer] Attempting to send email: ${subject} -> ${to}`);
+
+    const result = await transporter.sendMail({
+      from: process.env.MAIL_FROM || process.env.SMTP_USER,
+      to,
+      subject,
+      text,
+      html,
+      attachments: [...defaultAttachments, ...attachments],
+    });
+
+    console.log(`[mailer] Email sent successfully: ${subject} -> ${to}`, {
+      messageId: result.messageId,
+      accepted: result.accepted,
+      rejected: result.rejected,
+    });
+
+    return result;
+  } catch (error) {
+    const errorMessage = error.message || 'Unknown SMTP error';
+    const errorCode = error.code || 'UNKNOWN';
+    
+    console.error(`[mailer] ❌ Failed to send email: ${subject} -> ${to}`, {
+      errorCode,
+      errorMessage,
+      errorFull: error.toString(),
+    });
+
+    // Re-throw error untuk ditangkap di caller
+    throw error;
+  }
 }
 
 module.exports = {

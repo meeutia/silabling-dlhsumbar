@@ -307,7 +307,7 @@ export function LoginPage({ onLogin, onSwitchToRegister }) {
                 />
               </div>
 
-              <div className="mt-6 flex justify-end gap-3">
+              <div className="p-6 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={closeForgotModal}

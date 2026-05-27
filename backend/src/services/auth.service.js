@@ -467,35 +467,43 @@ const forgotPassword = async (email) => {
   const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
   const safeUsername = escapeHtml(user.username || user.email || 'Pengguna');
 
-  await sendMail({
-    to: user.email,
-    subject: 'Reset Kata Sandi Akun SILABLING',
-    text:
-      `Halo ${user.username || 'Pengguna'},\n\n` +
-      `Kami menerima permintaan reset kata sandi untuk akun SILABLING Anda.\n\n` +
-      `Klik link berikut untuk membuat kata sandi baru:\n${resetUrl}\n\n` +
-      `Link ini berlaku selama ${RESET_PASSWORD_EXPIRES_MINUTES} menit.\n\n` +
-      `Jika Anda tidak meminta reset kata sandi, abaikan email ini.`,
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-        <h2 style="margin-bottom: 12px;">Reset Kata Sandi SILABLING</h2>
-        <p>Halo <strong>${safeUsername}</strong>,</p>
-        <p>Kami menerima permintaan reset kata sandi untuk akun SILABLING Anda.</p>
-        <p>Klik tombol berikut untuk membuat kata sandi baru:</p>
-        <p style="margin: 24px 0;">
-          <a href="${resetUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold;">
-            Reset Kata Sandi
-          </a>
-        </p>
-        <p>Link ini berlaku selama <strong>${RESET_PASSWORD_EXPIRES_MINUTES} menit</strong>.</p>
-        <p>Jika tombol tidak bisa diklik, salin link berikut ke browser:</p>
-        <p style="word-break:break-all;color:#374151;background:#f3f4f6;padding:12px;border-radius:8px;">${resetUrl}</p>
-        <p>Jika Anda tidak meminta reset kata sandi, abaikan email ini.</p>
-      </div>
-    `,
-  });
+  try {
+    await sendMail({
+      to: user.email,
+      subject: 'Reset Kata Sandi Akun SILABLING',
+      text:
+        `Halo ${user.username || 'Pengguna'},\n\n` +
+        `Kami menerima permintaan reset kata sandi untuk akun SILABLING Anda.\n\n` +
+        `Klik link berikut untuk membuat kata sandi baru:\n${resetUrl}\n\n` +
+        `Link ini berlaku selama ${RESET_PASSWORD_EXPIRES_MINUTES} menit.\n\n` +
+        `Jika Anda tidak meminta reset kata sandi, abaikan email ini.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+          <h2 style="margin-bottom: 12px;">Reset Kata Sandi SILABLING</h2>
+          <p>Halo <strong>${safeUsername}</strong>,</p>
+          <p>Kami menerima permintaan reset kata sandi untuk akun SILABLING Anda.</p>
+          <p>Klik tombol berikut untuk membuat kata sandi baru:</p>
+          <p style="margin: 24px 0;">
+            <a href="${resetUrl}" style="display:inline-block;background:#059669;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:bold;">
+              Reset Kata Sandi
+            </a>
+          </p>
+          <p>Link ini berlaku selama <strong>${RESET_PASSWORD_EXPIRES_MINUTES} menit</strong>.</p>
+          <p>Jika tombol tidak bisa diklik, salin link berikut ke browser:</p>
+          <p style="word-break:break-all;color:#374151;background:#f3f4f6;padding:12px;border-radius:8px;">${resetUrl}</p>
+          <p>Jika Anda tidak meminta reset kata sandi, abaikan email ini.</p>
+        </div>
+      `,
+    });
 
-  return { sent: true };
+    console.log(`[auth-service] Reset password email sent to ${user.email}`);
+    return { sent: true };
+  } catch (emailError) {
+    console.error(`[auth-service] Failed to send reset password email to ${user.email}:`, emailError.message);
+    
+    // Jangan revoke token, tapi throw error agar user tahu
+    throw new Error(`Gagal mengirim email reset kata sandi. Silakan coba lagi. (${emailError.message})`);
+  }
 };
 
 const resetPassword = async ({ token, password, confirmPassword }) => {
